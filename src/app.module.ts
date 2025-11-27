@@ -4,6 +4,11 @@ import { AppService } from './app.service';
 import { CatsModule } from './cats/cats.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BreedsModule } from './breeds/breeds.module';
+import { UsersModule } from './users/users.module';
+import { IncidentsModule } from './incidents/incidents.module';
+import { ProblemsModule } from './problems/problems.module';
+import { ServiceRequestModule } from './service-request/service-request.module';
+import { ChangeRequestModule } from './change-request/change-request.module';
 
 @Module({
   imports: [
@@ -19,6 +24,11 @@ import { BreedsModule } from './breeds/breeds.module';
       synchronize: true,
     }),
     BreedsModule,
+    UsersModule,
+    IncidentsModule,
+    ProblemsModule,
+    ServiceRequestModule,
+    ChangeRequestModule,
   ],
   controllers: [AppController],
   providers: [AppService],
