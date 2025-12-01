@@ -14,4 +14,4 @@ import { ProblemsService } from 'src/problems/problems.service';
   providers: [IncidentsService, UsersService, ProblemsService],
   exports: [],
 })
-export class IncidentsModule {}
+export class IncidentsModule { }

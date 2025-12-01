@@ -12,4 +12,4 @@ import { UsersService } from 'src/users/users.service';
   providers: [ServiceRequestService, UsersService],
   exports: [],
 })
-export class ServiceRequestModule {}
+export class ServiceRequestModule { }

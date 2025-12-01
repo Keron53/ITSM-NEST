@@ -1,8 +1,9 @@
+
 import { ChangeRequest } from "src/change-request/entities/change-request.entity";
 import { Incident } from "src/incidents/entities/incident.entity";
 import { Problem } from "src/problems/entities/problem.entity";
 import { ServiceRequest } from "src/service-request/entities/service-request.entity";
-import { Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { Column, CreateDateColumn, DeleteDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 
 export enum UserRole {
     ADMIN = 'admin',
@@ -77,6 +78,8 @@ export class User {
 
     @OneToMany(() => Incident, (incident) => incident.assignee)
     incidentAssigned: Incident[];
-    
+
+    @DeleteDateColumn({ name: 'deleted_at' })
+    deletedAt: Date;
 
 }

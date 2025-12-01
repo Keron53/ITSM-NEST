@@ -1,6 +1,6 @@
 import { Incident } from "src/incidents/entities/incident.entity";
 import { User } from "src/users/entities/user.entity";
-import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { Column, CreateDateColumn, DeleteDateColumn, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 
 export enum ProblemCategory {
     HARDWARE = 'hardware',
@@ -92,4 +92,7 @@ export class Problem {
     //Relaciones hacia Incidentes
     @OneToMany(() => Incident, (incident) => incident.relatedProblem)
     incidentsAssigned: Incident[];
+
+    @DeleteDateColumn({ name: 'deleted_at' })
+    deletedAt: Date;
 }

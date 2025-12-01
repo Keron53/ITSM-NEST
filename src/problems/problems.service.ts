@@ -18,8 +18,8 @@ export class ProblemsService {
   ) { }
 
   async create(createProblemDto: CreateProblemDto) {
-    const reporter = await this.userRepository.findOneBy({ 
-      id: createProblemDto.reporterId 
+    const reporter = await this.userRepository.findOneBy({
+      id: createProblemDto.reporterId
     });
 
     if (!reporter) {
@@ -35,11 +35,16 @@ export class ProblemsService {
   }
 
   async findAll() {
-    return await this.problemsRepository.find();
+    return await this.problemsRepository.find({
+      relations: ['reporter', 'assignee'],
+    });
   }
 
   async findOne(id: number) {
-    return await this.problemsRepository.findOneBy({ id });
+    return await this.problemsRepository.findOne({
+      where: { id },
+      relations: ['reporter', 'assignee'],
+    });
   }
 
   async update(id: number, updateProblemDto: UpdateProblemDto) {
@@ -49,7 +54,7 @@ export class ProblemsService {
 
     if (updateProblemDto.assignedId) {
       assignee = await this.userRepository.findOneBy({ id: updateProblemDto.assignedId });
-      
+
       if (!assignee) {
         throw new BadRequestException('Assignee user not found');
       }
@@ -59,10 +64,20 @@ export class ProblemsService {
       }
     }
 
+    let reporter;
+    if (updateProblemDto.reporterId) {
+      reporter = await this.userRepository.findOneBy({ id: updateProblemDto.reporterId });
+
+      if (!reporter) {
+        throw new BadRequestException('Reporter user not found');
+      }
+    }
+
     return await this.problemsRepository.save({
       ...problem,
       ...updateProblemDto,
       assignee,
+      reporter,
     });
   }
 

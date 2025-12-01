@@ -1,5 +1,5 @@
 import { User } from "src/users/entities/user.entity";
-import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Column, CreateDateColumn, DeleteDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
 
 export enum RequestPriority {
     LOW = 'low',
@@ -53,7 +53,7 @@ export class ServiceRequest {
     requester: User;
 
     @ManyToOne(() => User, (user) => user.serviceRequestsAssigned)
-    @JoinColumn({ name: 'reciever_id' })
+    @JoinColumn({ name: 'receiver_id' })
     receiver: User;
 
     @CreateDateColumn({ name: 'request_date', type: 'timestamp' })
@@ -67,4 +67,7 @@ export class ServiceRequest {
 
     @Column({ name: 'post_comments', type: 'text', nullable: true })
     postComments: string;
+
+    @DeleteDateColumn({ name: 'deleted_at' })
+    deletedAt: Date;
 }

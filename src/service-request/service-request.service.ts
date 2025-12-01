@@ -38,11 +38,16 @@ export class ServiceRequestService {
   }
 
   async findAll() {
-    return await this.serviceRequestRepository.find();
+    return await this.serviceRequestRepository.find({
+      relations: ['requester', 'receiver'],
+    });
   }
 
   async findOne(id: number) {
-    return await this.serviceRequestRepository.findOneBy({ id });
+    return await this.serviceRequestRepository.findOne({
+      where: { id },
+      relations: ['requester', 'receiver'],
+    });
   }
 
   async update(id: number, updateServiceRequestDto: UpdateServiceRequestDto) {
@@ -71,11 +76,23 @@ export class ServiceRequestService {
       }
     }
 
+    let requester;
+    if (updateServiceRequestDto.requesterId) {
+      requester = await this.userRepository.findOneBy({
+        id: updateServiceRequestDto.requesterId,
+      });
+
+      if (!requester) {
+        throw new BadRequestException('Requester (User) not found');
+      }
+    }
+
     // 3. Guardamos mezclando los datos anteriores, los nuevos y la relación
     return await this.serviceRequestRepository.save({
       ...serviceRequest,
       ...updateServiceRequestDto,
       receiver, // Si receiver es undefined, TypeORM ignora esta línea y no borra el existente
+      requester,
     });
   }
 

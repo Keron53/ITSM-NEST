@@ -1,5 +1,5 @@
 import { User } from "src/users/entities/user.entity";
-import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Column, CreateDateColumn, DeleteDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
 
 export enum ChangePriority {
     LOW = 'low',
@@ -54,7 +54,7 @@ export class ChangeRequest {
         default: ChangePriority.LOW,
     })
     priority: ChangePriority;
-        
+
     @Column({
         type: 'enum',
         enum: ChangeStatus,
@@ -74,7 +74,7 @@ export class ChangeRequest {
     @JoinColumn({ name: 'approver_id' })
     approver: User;
 
-    @Column({ name: 'implementation_plan', type: 'text'})
+    @Column({ name: 'implementation_plan', type: 'text' })
     implementationPlan: string;
 
     @Column({ name: 'rollback_plan', type: 'text' })
@@ -94,4 +94,7 @@ export class ChangeRequest {
 
     @Column({ name: 'closure_notes', type: 'text', nullable: true })
     closureNotes: string;
+
+    @DeleteDateColumn({ name: 'deleted_at' })
+    deletedAt: Date;
 }

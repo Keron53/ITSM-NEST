@@ -35,11 +35,16 @@ export class ChangeRequestService {
   }
 
   async findAll() {
-    return await this.changeRequestRepository.find();
+    return await this.changeRequestRepository.find({
+      relations: ['requester', 'assignee', 'approver'],
+    });
   }
 
   async findOne(id: number) {
-    return await this.changeRequestRepository.findOneBy({ id });
+    return await this.changeRequestRepository.findOne({
+      where: { id },
+      relations: ['requester', 'assignee', 'approver'],
+    });
   }
 
   async update(id: number, updateChangeRequestDto: UpdateChangeRequestDto) {
@@ -60,11 +65,18 @@ export class ChangeRequestService {
       if (!approver) throw new BadRequestException('Approver user not found');
     }
 
+    let requester;
+    if (updateChangeRequestDto.requesterId) {
+      requester = await this.userRepository.findOneBy({ id: updateChangeRequestDto.requesterId });
+      if (!requester) throw new BadRequestException('Requester user not found');
+    }
+
     return await this.changeRequestRepository.save({
       ...changeRequest,
       ...updateChangeRequestDto,
       assignee,
       approver,
+      requester,
     });
   }
 

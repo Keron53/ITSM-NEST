@@ -1,6 +1,6 @@
 import { Problem } from "src/problems/entities/problem.entity";
 import { User } from "src/users/entities/user.entity";
-import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Column, CreateDateColumn, DeleteDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
 
 export enum IncidentCategory {
     HARDWARE = 'hardware',
@@ -104,5 +104,8 @@ export class Incident {
 
     @Column({ name: 'closure_notes', type: 'text', nullable: true })
     closureNotes: string;
+
+    @DeleteDateColumn({ name: 'deleted_at' })
+    deletedAt: Date;
 
 }

@@ -1,0 +1,8 @@
+src/pages/changes/ChangeRequestForm.tsx(53,17): error TS2322: Type 'ChangeType' is not assignable to type '"normal"'.
+  Type '"standard"' is not assignable to type '"normal"'.
+src/pages/changes/ChangeRequestForm.tsx(55,17): error TS2322: Type 'ChangePriority' is not assignable to type '"low"'.
+  Type '"high"' is not assignable to type '"low"'.
+src/pages/changes/ChangeRequestForm.tsx(139,73): error TS2322: Type 'ChangeType' is not assignable to type '"normal"'.
+  Type '"standard"' is not assignable to type '"normal"'.
+src/pages/changes/ChangeRequestForm.tsx(152,73): error TS2322: Type 'ChangePriority' is not assignable to type '"low"'.
+  Type '"high"' is not assignable to type '"low"'.

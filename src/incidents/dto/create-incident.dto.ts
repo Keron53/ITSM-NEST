@@ -1,5 +1,5 @@
 import { IsNotEmpty, IsString, IsEnum, MaxLength, IsOptional, IsInt } from "class-validator";
-import { IncidentCategory, IncidentPriority, RelatedDevices } from "../entities/incident.entity";
+import { IncidentCategory, IncidentPriority, IncidentStatus, RelatedDevices } from "../entities/incident.entity";
 
 export class CreateIncidentDto {
 
@@ -29,6 +29,10 @@ export class CreateIncidentDto {
     @IsEnum(RelatedDevices)
     @IsNotEmpty()
     relatedDevice: RelatedDevices;
+
+    @IsEnum(IncidentStatus)
+    @IsOptional()
+    status?: IncidentStatus;
 
     @IsNotEmpty()
     @IsInt()

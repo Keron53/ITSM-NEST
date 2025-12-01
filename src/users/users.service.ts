@@ -11,7 +11,7 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-  ) {}
+  ) { }
 
 
   async create(createUserDto: CreateUserDto) {
@@ -32,6 +32,6 @@ export class UsersService {
   }
 
   async remove(id: number) {
-    return await this.userRepository.softDelete;
+    return await this.userRepository.softDelete(id);
   }
 }

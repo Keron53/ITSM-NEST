@@ -69,11 +69,16 @@ export class IncidentsService {
   }
 
   async findAll() {
-    return await this.incidentRepository.find();
+    return await this.incidentRepository.find({
+      relations: ['reporter', 'assignee', 'relatedProblem'],
+    });
   }
 
   async findOne(id: number) {
-    return await this.incidentRepository.findOneBy({ id });
+    return await this.incidentRepository.findOne({
+      where: { id },
+      relations: ['reporter', 'assignee', 'relatedProblem'],
+    });
   }
 
   async update(id: number, updateIncidentDto: UpdateIncidentDto) {
@@ -95,6 +100,17 @@ export class IncidentsService {
       }
     }
 
+    let reporter;
+    if (updateIncidentDto.reporterId) {
+      reporter = await this.userRepository.findOneBy({
+        id: updateIncidentDto.reporterId,
+      });
+
+      if (!reporter) {
+        throw new BadRequestException('Reporter (User) not found');
+      }
+    }
+
     let relatedProblem;
 
     if (updateIncidentDto.relatedProblem) {
@@ -111,11 +127,12 @@ export class IncidentsService {
       ...incident,
       ...updateIncidentDto,
       assignee,
+      reporter,
       relatedProblem,
     });
   }
 
   async remove(id: number) {
-    return await this.incidentRepository.delete(id);
+    return await this.incidentRepository.softDelete(id);
   }
 }
