@@ -39,4 +39,8 @@ export class CreateServiceRequestDto {
     @IsOptional()
     @IsInt()
     receiverId?: number;
+
+    @IsOptional()
+    @IsString()
+    postComments?: string;
 }

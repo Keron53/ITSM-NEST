@@ -49,5 +49,4 @@ export class CreateIncidentDto {
     @IsOptional()
     @IsString()
     closureNotes?: string;
-
 }

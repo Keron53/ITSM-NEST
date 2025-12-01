@@ -52,4 +52,8 @@ export class CreateProblemDto {
     @IsOptional()
     @MaxLength(200)
     implementedSolution: string;
+
+    @IsString()
+    @IsOptional()
+    closureNotes: string;
 }
