@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { CreateIncidentDto } from './dto/create-incident.dto';
 import { UpdateIncidentDto } from './dto/update-incident.dto';
 import { Repository } from 'typeorm';
@@ -21,7 +21,12 @@ export class IncidentsService {
     private readonly problemRepository: Repository<Problem>,
   ) { }
 
-  async create(createIncidentDto: CreateIncidentDto) {
+  async create(createIncidentDto: CreateIncidentDto, user: any) {
+    // Si el usuario es 'user', forzamos que el reporter sea él mismo
+    if (user.role === 'user') {
+      createIncidentDto.reporterId = user.userId;
+    }
+
     const reporter = await this.userRepository.findOneBy({
       id: createIncidentDto.reporterId
     });
@@ -68,8 +73,14 @@ export class IncidentsService {
     return await this.incidentRepository.save(incident);
   }
 
-  async findAll() {
+  async findAll(user: any) {
+    const where: any = {};
+    if (user.role === 'user') {
+      where.reporter = { id: user.userId };
+    }
+
     return await this.incidentRepository.find({
+      where,
       relations: ['reporter', 'assignee', 'relatedProblem'],
     });
   }
@@ -81,11 +92,42 @@ export class IncidentsService {
     });
   }
 
-  async update(id: number, updateIncidentDto: UpdateIncidentDto) {
-    const incident = await this.incidentRepository.findOneBy({ id });
+  async update(id: number, updateIncidentDto: UpdateIncidentDto, user?: any) {
+    const incident = await this.incidentRepository.findOne({
+      where: { id },
+      relations: ['reporter', 'assignee', 'relatedProblem'],
+    });
 
     if (!incident) {
       throw new NotFoundException('Incident not found');
+    }
+
+    // AGENT RBAC LOGIC
+    if (user.role === 'agent') {
+      const isReporter = incident.reporter.id === user.userId;
+      const isAssignee = incident.assignee?.id === user.userId;
+
+      if (!isReporter && !isAssignee) {
+        throw new ForbiddenException('You do not have permission to edit this incident');
+      }
+
+      if (isAssignee && !isReporter) {
+        // Filter DTO to only allow status and closureNotes (if applicable)
+        const { status, closureNotes, ...others } = updateIncidentDto;
+
+        const newDto: UpdateIncidentDto = {};
+        if (status) newDto.status = status;
+
+        // Check closureNotes condition
+        const isResolvedOrCanceled = (status === 'resolved' || status === 'canceled') || (incident.status === 'resolved' || incident.status === 'canceled');
+
+        if (closureNotes && isResolvedOrCanceled) {
+          newDto.closureNotes = closureNotes;
+        }
+
+        // Use the filtered DTO
+        updateIncidentDto = newDto;
+      }
     }
 
     let assignee;

@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, CheckCircle, XCircle, Eye, Edit2, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Table from '../../components/Table';
-import { getIncidents, deleteIncident } from '../../services/incidents.service';
-import { type Incident, IncidentStatus, IncidentPriority } from '../../types';
+import { getIncidents, deleteIncident, updateIncident } from '../../services/incidents.service';
+import { type Incident, IncidentStatus, IncidentPriority, UserRole } from '../../types';
+import { useAuth } from '../../context/AuthContext';
 
 const IncidentList = () => {
     const [incidents, setIncidents] = useState<Incident[]>([]);
     const navigate = useNavigate();
+    const { user } = useAuth();
 
     useEffect(() => {
         loadIncidents();
@@ -29,6 +31,17 @@ const IncidentList = () => {
                 loadIncidents();
             } catch (error) {
                 console.error('Error deleting incident:', error);
+            }
+        }
+    };
+
+    const handleStatusUpdate = async (id: number, status: IncidentStatus) => {
+        if (window.confirm(`Are you sure you want to change status to ${status}?`)) {
+            try {
+                await updateIncident(id, { status });
+                loadIncidents();
+            } catch (error) {
+                console.error('Error updating status:', error);
             }
         }
     };
@@ -64,6 +77,9 @@ const IncidentList = () => {
         { header: 'Reporter', accessor: (item: Incident) => item.reporter?.name || 'Unknown' },
     ];
 
+    const isAgent = user?.role === UserRole.AGENT;
+    const isAdmin = user?.role === UserRole.ADMIN;
+
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -80,8 +96,78 @@ const IncidentList = () => {
             <Table
                 data={incidents}
                 columns={columns}
-                onEdit={(item) => navigate(`/incidents/${item.id}/edit`)}
-                onDelete={handleDelete}
+                customActions={(item) => {
+                    const isAssignee = String(item.assignee?.id) === String(user?.id);
+                    const isReporter = String(item.reporter?.id) === String(user?.id);
+                    const isUser = user?.role === UserRole.USER;
+                    const isPending = item.status === IncidentStatus.PENDING;
+
+                    // Permissions
+                    const canEdit = (isAdmin || (isAgent && (isReporter || isAssignee)) || (isUser && isReporter)) && isPending;
+                    // View only if NOT pending
+
+                    return (
+                        <div className="flex justify-end gap-2">
+                            {isPending && (
+                                <>
+                                    {/* Resolve Button - For Assignee (Agent) or Reporter (User) */}
+                                    {((isAgent && isAssignee) || (isUser && isReporter)) && (
+                                        <button
+                                            onClick={() => handleStatusUpdate(item.id, IncidentStatus.RESOLVED)}
+                                            className="text-green-600 hover:text-green-900 p-1 hover:bg-green-50 rounded"
+                                            title="Resolve (Accept)"
+                                        >
+                                            <CheckCircle size={18} />
+                                        </button>
+                                    )}
+
+                                    {/* Cancel Button - For Assignee or Reporter */}
+                                    {((isAgent && isAssignee) || (isUser && isReporter) || (isAgent && isReporter)) && (
+                                        <button
+                                            onClick={() => handleStatusUpdate(item.id, IncidentStatus.CANCELED)}
+                                            className="text-red-600 hover:text-red-900 p-1 hover:bg-red-50 rounded"
+                                            title="Cancel"
+                                        >
+                                            <XCircle size={18} />
+                                        </button>
+                                    )}
+
+                                    {/* Edit Button */}
+                                    {canEdit && (
+                                        <button
+                                            onClick={() => navigate(`/incidents/${item.id}/edit`)}
+                                            className="text-indigo-600 hover:text-indigo-900 p-1 hover:bg-indigo-50 rounded"
+                                            title="Edit"
+                                        >
+                                            <Edit2 size={18} />
+                                        </button>
+                                    )}
+                                </>
+                            )}
+
+                            {/* View Button - Show if NOT Pending */}
+                            {!isPending && (
+                                <button
+                                    onClick={() => navigate(`/incidents/${item.id}/edit`)}
+                                    className="text-blue-600 hover:text-blue-900 p-1 hover:bg-blue-50 rounded"
+                                    title="View"
+                                >
+                                    <Eye size={18} />
+                                </button>
+                            )}
+
+                            {isAdmin && (
+                                <button
+                                    onClick={() => handleDelete(item)}
+                                    className="text-red-600 hover:text-red-900 p-1 hover:bg-red-50 rounded"
+                                    title="Delete"
+                                >
+                                    <Trash2 size={18} />
+                                </button>
+                            )}
+                        </div>
+                    );
+                }}
             />
         </div>
     );

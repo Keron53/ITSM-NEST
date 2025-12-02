@@ -7,6 +7,7 @@ import { IncidentsModule } from './incidents/incidents.module';
 import { ProblemsModule } from './problems/problems.module';
 import { ServiceRequestModule } from './service-request/service-request.module';
 import { ChangeRequestModule } from './change-request/change-request.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -25,8 +26,9 @@ import { ChangeRequestModule } from './change-request/change-request.module';
     ProblemsModule,
     ServiceRequestModule,
     ChangeRequestModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }

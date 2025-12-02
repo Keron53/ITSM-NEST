@@ -4,6 +4,7 @@ import { createChangeRequest, getChangeRequest, updateChangeRequest } from '../.
 import { getUsers } from '../../services/users.service';
 import { ChangePriority, ChangeStatus, ChangeType, UserRole } from '../../types';
 import type { User } from '../../types';
+import { useAuth } from '../../context/AuthContext';
 
 const ChangeRequestForm = () => {
     const { id } = useParams();
@@ -23,6 +24,7 @@ const ChangeRequestForm = () => {
         approverId: '',
         implementationPlan: '',
         rollbackPlan: '',
+        closureNotes: '',
     });
 
     const [users, setUsers] = useState<User[]>([]);
@@ -59,6 +61,7 @@ const ChangeRequestForm = () => {
                 approverId: data.approver?.id.toString() || '',
                 implementationPlan: data.implementationPlan,
                 rollbackPlan: data.rollbackPlan,
+                closureNotes: data.closureNotes || '',
             });
         } catch (error) {
             console.error('Error loading change request:', error);
@@ -91,6 +94,14 @@ const ChangeRequestForm = () => {
         }
     };
 
+    const { user } = useAuth();
+    const isAgent = user?.role === 'agent';
+    const isRequester = user?.id === Number(formData.requesterId);
+    const isAssignee = user?.id === Number(formData.assignedId);
+
+    const disableGeneralFields = isEdit && isAgent && !isRequester;
+    const disableStatus = isEdit && isAgent && !isRequester && !isAssignee;
+
     return (
         <div className="max-w-3xl mx-auto bg-white p-8 rounded-xl border border-gray-200 shadow-sm">
             <h2 className="text-2xl font-bold text-gray-800 mb-6">
@@ -104,7 +115,8 @@ const ChangeRequestForm = () => {
                         <input
                             type="text"
                             required
-                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            disabled={disableGeneralFields}
+                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
                             value={formData.title}
                             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                         />
@@ -115,7 +127,8 @@ const ChangeRequestForm = () => {
                         <textarea
                             required
                             rows={3}
-                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            disabled={disableGeneralFields}
+                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
                             value={formData.description}
                             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                         />
@@ -125,7 +138,8 @@ const ChangeRequestForm = () => {
                         <label className="block text-sm font-medium text-gray-700 mb-1">Justification</label>
                         <textarea
                             rows={2}
-                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            disabled={disableGeneralFields}
+                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
                             value={formData.justification}
                             onChange={(e) => setFormData({ ...formData, justification: e.target.value })}
                         />
@@ -134,7 +148,8 @@ const ChangeRequestForm = () => {
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
                         <select
-                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            disabled={disableGeneralFields}
+                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
                             value={formData.type}
                             onChange={(e) => setFormData({ ...formData, type: e.target.value as ChangeType })}
                         >
@@ -147,7 +162,8 @@ const ChangeRequestForm = () => {
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
                         <select
-                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            disabled={disableGeneralFields}
+                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
                             value={formData.priority}
                             onChange={(e) => setFormData({ ...formData, priority: e.target.value as ChangePriority })}
                         >
@@ -162,7 +178,8 @@ const ChangeRequestForm = () => {
                         <input
                             type="text"
                             required
-                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            disabled={disableGeneralFields}
+                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
                             value={formData.area}
                             onChange={(e) => setFormData({ ...formData, area: e.target.value })}
                         />
@@ -172,7 +189,8 @@ const ChangeRequestForm = () => {
                         <label className="block text-sm font-medium text-gray-700 mb-1">Requester</label>
                         <select
                             required
-                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            disabled={disableGeneralFields}
+                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
                             value={formData.requesterId}
                             onChange={(e) => setFormData({ ...formData, requesterId: e.target.value })}
                         >
@@ -188,7 +206,8 @@ const ChangeRequestForm = () => {
                         <textarea
                             required
                             rows={3}
-                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            disabled={disableGeneralFields}
+                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
                             value={formData.implementationPlan}
                             onChange={(e) => setFormData({ ...formData, implementationPlan: e.target.value })}
                         />
@@ -199,7 +218,8 @@ const ChangeRequestForm = () => {
                         <textarea
                             required
                             rows={3}
-                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            disabled={disableGeneralFields}
+                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
                             value={formData.rollbackPlan}
                             onChange={(e) => setFormData({ ...formData, rollbackPlan: e.target.value })}
                         />
@@ -208,7 +228,8 @@ const ChangeRequestForm = () => {
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Assignee</label>
                         <select
-                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            disabled={disableGeneralFields}
+                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
                             value={formData.assignedId}
                             onChange={(e) => setFormData({ ...formData, assignedId: e.target.value })}
                         >
@@ -222,7 +243,8 @@ const ChangeRequestForm = () => {
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Approver</label>
                         <select
-                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            disabled={disableGeneralFields}
+                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
                             value={formData.approverId}
                             onChange={(e) => setFormData({ ...formData, approverId: e.target.value })}
                         >
@@ -234,18 +256,31 @@ const ChangeRequestForm = () => {
                     </div>
 
                     {isEdit && (
-                        <div className="col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                            <select
-                                className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                value={formData.status}
-                                onChange={(e) => setFormData({ ...formData, status: e.target.value as ChangeStatus })}
-                            >
-                                {Object.values(ChangeStatus).map((s) => (
-                                    <option key={s} value={s}>{s}</option>
-                                ))}
-                            </select>
-                        </div>
+                        <>
+                            <div className="col-span-2">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                                <select
+                                    disabled={disableStatus}
+                                    className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
+                                    value={formData.status}
+                                    onChange={(e) => setFormData({ ...formData, status: e.target.value as ChangeStatus })}
+                                >
+                                    {Object.values(ChangeStatus).map((s) => (
+                                        <option key={s} value={s}>{s}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="col-span-2">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Closure Notes</label>
+                                <textarea
+                                    rows={3}
+                                    disabled={disableStatus}
+                                    className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
+                                    value={formData.closureNotes}
+                                    onChange={(e) => setFormData({ ...formData, closureNotes: e.target.value })}
+                                />
+                            </div>
+                        </>
                     )}
                 </div>
 
@@ -257,12 +292,14 @@ const ChangeRequestForm = () => {
                     >
                         Cancel
                     </button>
-                    <button
-                        type="submit"
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                        {isEdit ? 'Update Change Request' : 'Create Change Request'}
-                    </button>
+                    {!disableStatus && (
+                        <button
+                            type="submit"
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                            {isEdit ? 'Update Change Request' : 'Create Change Request'}
+                        </button>
+                    )}
                 </div>
             </form>
         </div>

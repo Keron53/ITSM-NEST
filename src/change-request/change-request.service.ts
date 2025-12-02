@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { CreateChangeRequestDto } from './dto/create-change-request.dto';
 import { UpdateChangeRequestDto } from './dto/update-change-request.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -17,7 +17,7 @@ export class ChangeRequestService {
     private readonly userRepository: Repository<User>,
   ) { }
 
-  async create(createChangeRequestDto: CreateChangeRequestDto) {
+  async create(createChangeRequestDto: CreateChangeRequestDto, user?: any) {
     const requester = await this.userRepository.findOneBy({
       id: createChangeRequestDto.requesterId
     });
@@ -47,8 +47,48 @@ export class ChangeRequestService {
     });
   }
 
-  async update(id: number, updateChangeRequestDto: UpdateChangeRequestDto) {
+  async update(id: number, updateChangeRequestDto: UpdateChangeRequestDto, user?: any) {
     const changeRequest = await this.findOne(id)
+
+    if (!changeRequest) {
+      throw new NotFoundException('Change Request not found');
+    }
+
+    // AGENT RBAC LOGIC
+    if (user && user.role === 'agent') {
+      const isRequester = changeRequest.requester.id === user.userId;
+      const isAssignee = changeRequest.assignee?.id === user.userId;
+
+      if (!isRequester && !isAssignee) {
+        throw new ForbiddenException('You do not have permission to edit this change request');
+      }
+
+      if (isAssignee && !isRequester) {
+        // Filter DTO to only allow status and closureNotes (if applicable)
+        const { status, closureNotes, ...others } = updateChangeRequestDto;
+
+        const newDto: UpdateChangeRequestDto = {};
+        if (status) newDto.status = status;
+
+        // Check closureNotes condition
+        const isCompletedOrCanceled = (status === 'completed' || status === 'failed' || status === 'rejected' || status === 'approved') || (changeRequest.status === 'completed' || changeRequest.status === 'failed' || changeRequest.status === 'rejected' || changeRequest.status === 'approved');
+        // Note: ChangeStatus has many terminal states.
+        // Requirement: "siempre y cuando este haya sido cancelado o resuelto"
+        // For ChangeRequest, maybe 'completed', 'failed', 'rejected'?
+        // Let's assume 'completed', 'failed', 'rejected', 'approved' (maybe?)
+        // Let's stick to 'completed' and 'failed' as "resolved/canceled" equivalents for now, or maybe 'rejected' too.
+        // Actually, let's look at ChangeStatus enum: REQUESTED, APPROVED, REJECTED, IMPLEMENTATION, COMPLETED, FAILED.
+        // "Resuelto" -> COMPLETED. "Cancelado" -> maybe REJECTED or FAILED?
+        // I'll include COMPLETED, FAILED, REJECTED.
+
+        if (closureNotes && isCompletedOrCanceled) {
+          newDto.closureNotes = closureNotes;
+        }
+
+        // Use the filtered DTO
+        updateChangeRequestDto = newDto;
+      }
+    }
 
     let assignee;
     let approver;

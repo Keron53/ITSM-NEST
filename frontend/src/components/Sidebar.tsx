@@ -1,23 +1,43 @@
-
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import {
     LayoutDashboard,
     AlertCircle,
     AlertTriangle,
     GitPullRequest,
     ClipboardList,
-    Users
+    Users,
+    LogOut
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const Sidebar = () => {
+    const { user, logout } = useAuth();
+    const navigate = useNavigate();
+
     const navItems = [
-        { path: '/', label: 'Dashboard', icon: LayoutDashboard },
-        { path: '/incidents', label: 'Incidents', icon: AlertCircle },
-        { path: '/problems', label: 'Problems', icon: AlertTriangle },
-        { path: '/changes', label: 'Changes', icon: GitPullRequest },
-        { path: '/requests', label: 'Service Requests', icon: ClipboardList },
-        { path: '/users', label: 'Users', icon: Users },
+        { path: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'agent', 'user'] },
+        { path: '/incidents', label: 'Incidents', icon: AlertCircle, roles: ['admin', 'agent', 'user'] },
+        { path: '/problems', label: 'Problems', icon: AlertTriangle, roles: ['admin', 'agent'] },
+        { path: '/changes', label: 'Changes', icon: GitPullRequest, roles: ['admin', 'agent'] },
+        { path: '/requests', label: 'Service Requests', icon: ClipboardList, roles: ['admin', 'agent', 'user'] },
+        { path: '/users', label: 'Users', icon: Users, roles: ['admin'] },
     ];
+
+    const filteredNavItems = navItems.filter(item => user && item.roles.includes(user.role));
+
+    const handleLogout = () => {
+        logout();
+        navigate('/login');
+    };
+
+    const getInitials = (name: string) => {
+        return name
+            ?.split(' ')
+            .map((n) => n[0])
+            .join('')
+            .toUpperCase()
+            .substring(0, 2) || 'U';
+    };
 
     return (
         <div className="h-screen w-64 bg-slate-900 text-white flex flex-col fixed left-0 top-0">
@@ -25,7 +45,7 @@ const Sidebar = () => {
                 <h1 className="text-2xl font-bold text-blue-500">ITSM Portal</h1>
             </div>
             <nav className="flex-1 p-4 space-y-2">
-                {navItems.map((item) => (
+                {filteredNavItems.map((item) => (
                     <NavLink
                         key={item.path}
                         to={item.path}
@@ -42,15 +62,22 @@ const Sidebar = () => {
                 ))}
             </nav>
             <div className="p-4 border-t border-slate-800">
-                <div className="flex items-center gap-3 px-4 py-2">
-                    <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center font-bold">
-                        JD
+                <div className="flex items-center gap-3 px-4 py-2 mb-2">
+                    <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center font-bold text-xs">
+                        {getInitials(user?.name || '')}
                     </div>
-                    <div>
-                        <p className="text-sm font-medium">John Doe</p>
-                        <p className="text-xs text-slate-400">Admin</p>
+                    <div className="overflow-hidden">
+                        <p className="text-sm font-medium truncate">{user?.name}</p>
+                        <p className="text-xs text-slate-400 capitalize">{user?.role}</p>
                     </div>
                 </div>
+                <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-3 px-4 py-2 w-full text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+                >
+                    <LogOut size={20} />
+                    <span className="font-medium">Logout</span>
+                </button>
             </div>
         </div>
     );

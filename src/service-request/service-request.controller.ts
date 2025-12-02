@@ -1,20 +1,23 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import { ServiceRequestService } from './service-request.service';
 import { CreateServiceRequestDto } from './dto/create-service-request.dto';
 import { UpdateServiceRequestDto } from './dto/update-service-request.dto';
 
 @Controller('service-request')
 export class ServiceRequestController {
-  constructor(private readonly serviceRequestService: ServiceRequestService) {}
+  constructor(private readonly serviceRequestService: ServiceRequestService) { }
 
   @Post()
-  create(@Body() createServiceRequestDto: CreateServiceRequestDto) {
-    return this.serviceRequestService.create(createServiceRequestDto);
+  @UseGuards(AuthGuard('jwt'))
+  create(@Body() createServiceRequestDto: CreateServiceRequestDto, @Request() req) {
+    return this.serviceRequestService.create(createServiceRequestDto, req.user);
   }
 
   @Get()
-  findAll() {
-    return this.serviceRequestService.findAll();
+  @UseGuards(AuthGuard('jwt'))
+  findAll(@Request() req) {
+    return this.serviceRequestService.findAll(req.user);
   }
 
   @Get(':id')
@@ -23,8 +26,9 @@ export class ServiceRequestController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: number, @Body() updateServiceRequestDto: UpdateServiceRequestDto) {
-    return this.serviceRequestService.update(id, updateServiceRequestDto);
+  @UseGuards(AuthGuard('jwt'))
+  update(@Param('id') id: number, @Body() updateServiceRequestDto: UpdateServiceRequestDto, @Request() req) {
+    return this.serviceRequestService.update(id, updateServiceRequestDto, req.user);
   }
 
   @Delete(':id')

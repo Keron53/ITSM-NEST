@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, CheckCircle, XCircle, Eye, Edit2, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Table from '../../components/Table';
-import { getProblems, deleteProblem } from '../../services/problems.service';
-import { type Problem, ProblemStatus, ProblemPriority } from '../../types';
+import { getProblems, deleteProblem, updateProblem } from '../../services/problems.service';
+import { type Problem, ProblemStatus, ProblemPriority, UserRole } from '../../types';
+import { useAuth } from '../../context/AuthContext';
 
 const ProblemList = () => {
     const [problems, setProblems] = useState<Problem[]>([]);
     const navigate = useNavigate();
+    const { user } = useAuth();
 
     useEffect(() => {
         loadProblems();
@@ -29,6 +31,17 @@ const ProblemList = () => {
                 loadProblems();
             } catch (error) {
                 console.error('Error deleting problem:', error);
+            }
+        }
+    };
+
+    const handleStatusUpdate = async (id: number, status: ProblemStatus) => {
+        if (window.confirm(`Are you sure you want to change status to ${status}?`)) {
+            try {
+                await updateProblem(id, { status });
+                loadProblems();
+            } catch (error) {
+                console.error('Error updating status:', error);
             }
         }
     };
@@ -60,9 +73,11 @@ const ProblemList = () => {
                 </span>
             )
         },
-        { header: 'Category', accessor: 'category' as keyof Problem },
         { header: 'Reporter', accessor: (item: Problem) => item.reporter?.name || 'Unknown' },
     ];
+
+    const isAgent = user?.role === UserRole.AGENT;
+    const isAdmin = user?.role === UserRole.ADMIN;
 
     return (
         <div className="space-y-6">
@@ -80,8 +95,66 @@ const ProblemList = () => {
             <Table
                 data={problems}
                 columns={columns}
-                onEdit={(item) => navigate(`/problems/${item.id}/edit`)}
-                onDelete={handleDelete}
+                customActions={(item) => {
+                    const isAssignee = item.assignee?.id === user?.id;
+                    const isReporter = item.reporter?.id === user?.id;
+                    const canEdit = isAdmin || (isAgent && (isReporter || isAssignee));
+                    const canView = isAgent && !isReporter && !isAssignee;
+                    const showStatusActions = isAgent && isAssignee;
+
+                    return (
+                        <div className="flex justify-end gap-2">
+                            {showStatusActions && item.status !== ProblemStatus.RESOLVED && item.status !== ProblemStatus.CANCELED && (
+                                <>
+                                    <button
+                                        onClick={() => handleStatusUpdate(item.id, ProblemStatus.RESOLVED)}
+                                        className="text-green-600 hover:text-green-900 p-1 hover:bg-green-50 rounded"
+                                        title="Resolved"
+                                    >
+                                        <CheckCircle size={18} />
+                                    </button>
+                                    <button
+                                        onClick={() => handleStatusUpdate(item.id, ProblemStatus.CANCELED)}
+                                        className="text-red-600 hover:text-red-900 p-1 hover:bg-red-50 rounded"
+                                        title="Canceled"
+                                    >
+                                        <XCircle size={18} />
+                                    </button>
+                                </>
+                            )}
+
+                            {canView && (
+                                <button
+                                    onClick={() => navigate(`/problems/${item.id}/edit`)}
+                                    className="text-blue-600 hover:text-blue-900 p-1 hover:bg-blue-50 rounded"
+                                    title="View"
+                                >
+                                    <Eye size={18} />
+                                </button>
+                            )}
+
+                            {canEdit && (
+                                <button
+                                    onClick={() => navigate(`/problems/${item.id}/edit`)}
+                                    className="text-indigo-600 hover:text-indigo-900 p-1 hover:bg-indigo-50 rounded"
+                                    title="Edit"
+                                >
+                                    <Edit2 size={18} />
+                                </button>
+                            )}
+
+                            {isAdmin && (
+                                <button
+                                    onClick={() => handleDelete(item)}
+                                    className="text-red-600 hover:text-red-900 p-1 hover:bg-red-50 rounded"
+                                    title="Delete"
+                                >
+                                    <Trash2 size={18} />
+                                </button>
+                            )}
+                        </div>
+                    );
+                }}
             />
         </div>
     );

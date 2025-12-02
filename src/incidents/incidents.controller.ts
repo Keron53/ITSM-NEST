@@ -1,20 +1,23 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import { IncidentsService } from './incidents.service';
 import { CreateIncidentDto } from './dto/create-incident.dto';
 import { UpdateIncidentDto } from './dto/update-incident.dto';
 
 @Controller('incidents')
 export class IncidentsController {
-  constructor(private readonly incidentsService: IncidentsService) {}
+  constructor(private readonly incidentsService: IncidentsService) { }
 
   @Post()
-  create(@Body() createIncidentDto: CreateIncidentDto) {
-    return this.incidentsService.create(createIncidentDto);
+  @UseGuards(AuthGuard('jwt'))
+  create(@Body() createIncidentDto: CreateIncidentDto, @Request() req) {
+    return this.incidentsService.create(createIncidentDto, req.user);
   }
 
   @Get()
-  findAll() {
-    return this.incidentsService.findAll();
+  @UseGuards(AuthGuard('jwt'))
+  findAll(@Request() req) {
+    return this.incidentsService.findAll(req.user);
   }
 
   @Get(':id')
@@ -23,8 +26,9 @@ export class IncidentsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: number, @Body() updateIncidentDto: UpdateIncidentDto) {
-    return this.incidentsService.update(id, updateIncidentDto);
+  @UseGuards(AuthGuard('jwt'))
+  update(@Param('id') id: number, @Body() updateIncidentDto: UpdateIncidentDto, @Request() req) {
+    return this.incidentsService.update(id, updateIncidentDto, req.user);
   }
 
   @Delete(':id')

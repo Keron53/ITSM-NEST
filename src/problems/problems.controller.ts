@@ -1,18 +1,21 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import { ProblemsService } from './problems.service';
 import { CreateProblemDto } from './dto/create-problem.dto';
 import { UpdateProblemDto } from './dto/update-problem.dto';
 
 @Controller('problems')
 export class ProblemsController {
-  constructor(private readonly problemsService: ProblemsService) {}
+  constructor(private readonly problemsService: ProblemsService) { }
 
   @Post()
-  create(@Body() createProblemDto: CreateProblemDto) {
-    return this.problemsService.create(createProblemDto);
+  @UseGuards(AuthGuard('jwt'))
+  create(@Body() createProblemDto: CreateProblemDto, @Request() req) {
+    return this.problemsService.create(createProblemDto, req.user);
   }
 
   @Get()
+  @UseGuards(AuthGuard('jwt'))
   findAll() {
     return this.problemsService.findAll();
   }
@@ -23,8 +26,9 @@ export class ProblemsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: number, @Body() updateProblemDto: UpdateProblemDto) {
-    return this.problemsService.update(id, updateProblemDto);
+  @UseGuards(AuthGuard('jwt'))
+  update(@Param('id') id: number, @Body() updateProblemDto: UpdateProblemDto, @Request() req) {
+    return this.problemsService.update(id, updateProblemDto, req.user);
   }
 
   @Delete(':id')

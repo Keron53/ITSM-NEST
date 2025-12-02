@@ -13,6 +13,7 @@ interface TableProps<T> {
     onEdit?: (item: T) => void;
     onDelete?: (item: T) => void;
     onView?: (item: T) => void;
+    customActions?: (item: T) => React.ReactNode;
     keyField?: keyof T;
 }
 
@@ -21,7 +22,8 @@ const Table = <T extends { id: number | string }>({
     columns,
     onEdit,
     onDelete,
-    onView
+    onView,
+    customActions
 }: TableProps<T>) => {
     return (
         <div className="overflow-x-auto bg-white rounded-lg border border-gray-200 shadow-sm">
@@ -36,7 +38,7 @@ const Table = <T extends { id: number | string }>({
                                 {col.header}
                             </th>
                         ))}
-                        {(onEdit || onDelete || onView) && (
+                        {(onEdit || onDelete || onView || customActions) && (
                             <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Actions
                             </th>
@@ -53,9 +55,10 @@ const Table = <T extends { id: number | string }>({
                                         : (item[col.accessor] as React.ReactNode)}
                                 </td>
                             ))}
-                            {(onEdit || onDelete || onView) && (
+                            {(onEdit || onDelete || onView || customActions) && (
                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     <div className="flex justify-end gap-2">
+                                        {customActions && customActions(item)}
                                         {onView && (
                                             <button
                                                 onClick={() => onView(item)}

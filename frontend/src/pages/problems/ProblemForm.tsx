@@ -4,6 +4,7 @@ import { createProblem, getProblem, updateProblem } from '../../services/problem
 import { getUsers } from '../../services/users.service';
 import { ProblemCategory, ProblemPriority, ProblemStatus } from '../../types';
 import type { User } from '../../types';
+import { useAuth } from '../../context/AuthContext';
 
 const ProblemForm = () => {
     const { id } = useParams();
@@ -97,6 +98,17 @@ const ProblemForm = () => {
         }
     };
 
+    const { user } = useAuth();
+    const isAgent = user?.role === 'agent';
+    const isReporter = user?.id === Number(formData.reporterId);
+    const isAssignee = user?.id === Number(formData.assignedId);
+
+    // If agent and NOT reporter (and is edit mode), restrict fields
+    // If isAssignee, allow status and closureNotes (if applicable)
+    // If neither, disable all
+    const disableGeneralFields = isEdit && isAgent && !isReporter;
+    const disableStatus = isEdit && isAgent && !isReporter && !isAssignee;
+
     return (
         <div className="max-w-2xl mx-auto bg-white p-8 rounded-xl border border-gray-200 shadow-sm">
             <h2 className="text-2xl font-bold text-gray-800 mb-6">
@@ -110,7 +122,8 @@ const ProblemForm = () => {
                         type="text"
                         required
                         maxLength={60}
-                        className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        disabled={disableGeneralFields}
+                        className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
                         value={formData.title}
                         onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     />
@@ -122,7 +135,8 @@ const ProblemForm = () => {
                         required
                         rows={4}
                         maxLength={200}
-                        className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        disabled={disableGeneralFields}
+                        className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
                         value={formData.description}
                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     />
@@ -135,7 +149,8 @@ const ProblemForm = () => {
                             type="text"
                             required
                             maxLength={60}
-                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            disabled={disableGeneralFields}
+                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
                             value={formData.problemArea}
                             onChange={(e) => setFormData({ ...formData, problemArea: e.target.value })}
                         />
@@ -144,7 +159,8 @@ const ProblemForm = () => {
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
                         <select
-                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            disabled={disableGeneralFields}
+                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
                             value={formData.category}
                             onChange={(e) => setFormData({ ...formData, category: e.target.value as ProblemCategory })}
                         >
@@ -159,7 +175,8 @@ const ProblemForm = () => {
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
                         <select
-                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            disabled={disableGeneralFields}
+                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
                             value={formData.priority}
                             onChange={(e) => setFormData({ ...formData, priority: e.target.value as ProblemPriority })}
                         >
@@ -175,7 +192,8 @@ const ProblemForm = () => {
                             type="text"
                             required
                             maxLength={200}
-                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            disabled={disableGeneralFields}
+                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
                             value={formData.cause}
                             onChange={(e) => setFormData({ ...formData, cause: e.target.value })}
                         />
@@ -187,7 +205,8 @@ const ProblemForm = () => {
                         <label className="block text-sm font-medium text-gray-700 mb-1">Reporter</label>
                         <select
                             required
-                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            disabled={disableGeneralFields}
+                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
                             value={formData.reporterId}
                             onChange={(e) => setFormData({ ...formData, reporterId: e.target.value })}
                         >
@@ -201,7 +220,8 @@ const ProblemForm = () => {
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Assignee</label>
                         <select
-                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            disabled={disableGeneralFields}
+                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
                             value={formData.assignedId}
                             onChange={(e) => setFormData({ ...formData, assignedId: e.target.value })}
                         >
@@ -218,7 +238,8 @@ const ProblemForm = () => {
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                             <select
-                                className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                disabled={disableStatus}
+                                className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
                                 value={formData.status}
                                 onChange={(e) => setFormData({ ...formData, status: e.target.value as ProblemStatus })}
                             >
@@ -232,7 +253,8 @@ const ProblemForm = () => {
                             <textarea
                                 rows={3}
                                 maxLength={200}
-                                className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                disabled={disableGeneralFields}
+                                className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
                                 value={formData.implementedSolution}
                                 onChange={(e) => setFormData({ ...formData, implementedSolution: e.target.value })}
                             />
@@ -241,7 +263,8 @@ const ProblemForm = () => {
                             <label className="block text-sm font-medium text-gray-700 mb-1">Closure Notes</label>
                             <textarea
                                 rows={3}
-                                className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                disabled={disableStatus}
+                                className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
                                 value={formData.closureNotes}
                                 onChange={(e) => setFormData({ ...formData, closureNotes: e.target.value })}
                             />
@@ -257,12 +280,14 @@ const ProblemForm = () => {
                     >
                         Cancel
                     </button>
-                    <button
-                        type="submit"
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                        {isEdit ? 'Update Problem' : 'Create Problem'}
-                    </button>
+                    {!disableStatus && (
+                        <button
+                            type="submit"
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                            {isEdit ? 'Update Problem' : 'Create Problem'}
+                        </button>
+                    )}
                 </div>
             </form>
         </div>

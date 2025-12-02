@@ -3,7 +3,8 @@ import { ChangeRequest } from "src/change-request/entities/change-request.entity
 import { Incident } from "src/incidents/entities/incident.entity";
 import { Problem } from "src/problems/entities/problem.entity";
 import { ServiceRequest } from "src/service-request/entities/service-request.entity";
-import { Column, CreateDateColumn, DeleteDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { Column, CreateDateColumn, DeleteDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn, BeforeInsert } from "typeorm";
+import * as bcrypt from 'bcrypt';
 
 export enum UserRole {
     ADMIN = 'admin',
@@ -82,4 +83,11 @@ export class User {
     @DeleteDateColumn({ name: 'deleted_at' })
     deletedAt: Date;
 
+    @BeforeInsert()
+    async hashPassword() {
+        if (this.password) {
+            console.log('Hashing password for user');
+            this.password = await bcrypt.hash(this.password, 10);
+        }
+    }
 }

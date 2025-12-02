@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, CheckCircle, XCircle, Eye, Edit2, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Table from '../../components/Table';
-import { getServiceRequests, deleteServiceRequest } from '../../services/service-request.service';
-import { type ServiceRequest, RequestStatus, RequestPriority } from '../../types';
+import { getServiceRequests, deleteServiceRequest, updateServiceRequest } from '../../services/service-request.service';
+import { type ServiceRequest, RequestStatus, RequestPriority, UserRole } from '../../types';
+import { useAuth } from '../../context/AuthContext';
 
 const ServiceRequestList = () => {
     const [requests, setRequests] = useState<ServiceRequest[]>([]);
     const navigate = useNavigate();
+    const { user } = useAuth();
 
     useEffect(() => {
         loadRequests();
@@ -29,6 +31,17 @@ const ServiceRequestList = () => {
                 loadRequests();
             } catch (error) {
                 console.error('Error deleting request:', error);
+            }
+        }
+    };
+
+    const handleStatusUpdate = async (id: number, status: RequestStatus) => {
+        if (window.confirm(`Are you sure you want to change status to ${status}?`)) {
+            try {
+                await updateServiceRequest(id, { status });
+                loadRequests();
+            } catch (error) {
+                console.error('Error updating status:', error);
             }
         }
     };
@@ -64,6 +77,9 @@ const ServiceRequestList = () => {
         { header: 'Requester', accessor: (item: ServiceRequest) => item.requester?.name || 'Unknown' },
     ];
 
+    const isAgent = user?.role === UserRole.AGENT;
+    const isAdmin = user?.role === UserRole.ADMIN;
+
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -80,8 +96,103 @@ const ServiceRequestList = () => {
             <Table
                 data={requests}
                 columns={columns}
-                onEdit={(item) => navigate(`/requests/${item.id}/edit`)}
-                onDelete={handleDelete}
+                customActions={(item) => {
+                    const isAssignee = String(item.receiver?.id) === String(user?.id);
+                    const isRequester = String(item.requester?.id) === String(user?.id);
+                    const isUser = user?.role === UserRole.USER;
+                    const isPending = item.status === RequestStatus.PENDING;
+
+                    // Permissions
+                    // Edit: 
+                    // - Admin: Always
+                    // - User: If Requester and Pending
+                    // - Agent: If Requester and Pending. (Agent Receiver cannot edit fields, only status)
+                    const canEdit = isAdmin || (((isAgent && isRequester) || (isUser && isRequester)) && isPending);
+
+                    // View:
+                    // - If NOT pending (everyone)
+                    // - If Agent Receiver (always, since they can't edit fields)
+                    // Admin nunca ve el botón de vista
+                    const canView = !isAdmin && !canEdit && (
+                        isAgent ||
+                        (isUser && item.status !== RequestStatus.PENDING)
+                    );
+
+                    return (
+                        <div className="flex justify-end gap-2">
+                            {isPending && (
+                                <>
+                                    {/* Completed Button - Only for Assignee (Agent) */}
+                                    {isAgent && (isAssignee || isRequester) && (
+                                        <button
+                                            onClick={() => handleStatusUpdate(item.id, RequestStatus.COMPLETED)}
+                                            className="text-green-600 hover:text-green-900 p-1 hover:bg-green-50 rounded"
+                                            title="Mark as Completed"
+                                        >
+                                            <CheckCircle size={18} />
+                                        </button>
+                                    )}
+
+                                    {/* Mark as Completed Button - For User (Requester) */}
+                                    {isUser && isRequester && (
+                                        <button
+                                            onClick={() => handleStatusUpdate(item.id, RequestStatus.COMPLETED)}
+                                            className="text-green-600 hover:text-green-900 p-1 hover:bg-green-50 rounded"
+                                            title="Mark as Completed"
+                                        >
+                                            <CheckCircle size={18} />
+                                        </button>
+                                    )}
+
+                                    {/* Cancel Button - For Assignee or Requester */}
+                                    {((isAgent && isAssignee) || (isUser && isRequester) || (isAgent && isRequester)) && (
+                                        <button
+                                            onClick={() => handleStatusUpdate(item.id, RequestStatus.CANCELED)}
+                                            className="text-red-600 hover:text-red-900 p-1 hover:bg-red-50 rounded"
+                                            title="Cancel"
+                                        >
+                                            <XCircle size={18} />
+                                        </button>
+                                    )}
+
+
+                                </>
+                            )}
+
+                            {/* Edit Button - Moved outside isPending so Admin can edit anytime */}
+                            {canEdit && (
+                                <button
+                                    onClick={() => navigate(`/requests/${item.id}/edit`)}
+                                    className="text-indigo-600 hover:text-indigo-900 p-1 hover:bg-indigo-50 rounded"
+                                    title="Edit"
+                                >
+                                    <Edit2 size={18} />
+                                </button>
+                            )}
+
+                            {/* View Button - Show if canView is true */}
+                            {canView && (
+                                <button
+                                    onClick={() => navigate(`/requests/${item.id}/edit`)}
+                                    className="text-blue-600 hover:text-blue-900 p-1 hover:bg-blue-50 rounded"
+                                    title="View"
+                                >
+                                    <Eye size={18} />
+                                </button>
+                            )}
+
+                            {isAdmin && (
+                                <button
+                                    onClick={() => handleDelete(item)}
+                                    className="text-red-600 hover:text-red-900 p-1 hover:bg-red-50 rounded"
+                                    title="Delete"
+                                >
+                                    <Trash2 size={18} />
+                                </button>
+                            )}
+                        </div>
+                    );
+                }}
             />
         </div>
     );

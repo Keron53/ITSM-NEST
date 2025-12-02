@@ -5,11 +5,14 @@ import { getUsers } from '../../services/users.service';
 import { getProblems } from '../../services/problems.service';
 import { IncidentCategory, IncidentPriority, IncidentStatus, RelatedDevices } from '../../types';
 import type { User, Problem } from '../../types';
+import { useAuth } from '../../context/AuthContext';
 
 const IncidentForm = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { user: currentUser } = useAuth();
     const isEdit = !!id;
+    const isUserRole = currentUser?.role === 'user';
 
     const [formData, setFormData] = useState<{
         title: string;
@@ -45,8 +48,15 @@ const IncidentForm = () => {
         loadProblemsList();
         if (isEdit) {
             loadIncident();
+        } else if (isUserRole && currentUser) {
+            // Set defaults for user role
+            setFormData(prev => ({
+                ...prev,
+                reporterId: currentUser.id.toString(),
+                incidentArea: currentUser.department || '',
+            }));
         }
-    }, [id]);
+    }, [id, isUserRole, currentUser]);
 
     const loadUsers = async () => {
         try {
@@ -104,9 +114,6 @@ const IncidentForm = () => {
                 closureNotes: formData.closureNotes || undefined,
             };
 
-            // Remove auxiliary fields not in DTO if necessary, but service handles it
-            // The service expects relatedProblem as a number in the payload intersection type
-
             if (isEdit) {
                 await updateIncident(Number(id), payload);
             } else {
@@ -118,10 +125,29 @@ const IncidentForm = () => {
         }
     };
 
+    // View only mode (no submit button) if agent is neither reporter nor assignee
+    // OR if user is viewing a non-pending incident (strict read-only)
+    const isViewOnly = (isEdit && !isUserRole && !!currentUser && formData.reporterId !== currentUser.id.toString() && formData.assignedId !== currentUser.id.toString()) ||
+        (isUserRole && isEdit && formData.status !== IncidentStatus.PENDING);
+
+    // If strict view only for user, we might want to disable ALL fields regardless of other logic
+    const isStrictViewOnly = isUserRole && isEdit && formData.status !== IncidentStatus.PENDING;
+
+    // Update field read-only logic
+    // For agents: read-only if not reporter/assignee (already handled by isViewOnly logic usually, but let's be explicit)
+    // Actually, existing code doesn't have explicit isFieldReadOnly variable, it uses conditions inline or relies on isUserRole.
+    // Let's introduce effectiveFieldReadOnly.
+    const isAgentReadOnly = isEdit && !isUserRole && !!currentUser && formData.reporterId !== currentUser.id.toString() && formData.assignedId !== currentUser.id.toString();
+    const effectiveFieldReadOnly = isStrictViewOnly || isAgentReadOnly;
+
     return (
         <div className="max-w-2xl mx-auto bg-white p-8 rounded-xl border border-gray-200 shadow-sm">
             <h2 className="text-2xl font-bold text-gray-800 mb-6">
-                {isEdit ? 'Edit Incident' : 'New Incident'}
+                {isEdit
+                    ? isViewOnly
+                        ? 'Incident Information'
+                        : 'Edit Incident'
+                    : 'New Incident'}
             </h2>
 
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -131,9 +157,10 @@ const IncidentForm = () => {
                         type="text"
                         required
                         maxLength={60}
-                        className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className={`w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500 disabled:border-gray-200 disabled:cursor-not-allowed`}
                         value={formData.title}
                         onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                        disabled={effectiveFieldReadOnly}
                     />
                 </div>
 
@@ -143,9 +170,10 @@ const IncidentForm = () => {
                         required
                         maxLength={200}
                         rows={4}
-                        className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className={`w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500 disabled:border-gray-200 disabled:cursor-not-allowed`}
                         value={formData.description}
                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        disabled={effectiveFieldReadOnly}
                     />
                 </div>
 
@@ -156,18 +184,20 @@ const IncidentForm = () => {
                             type="text"
                             required
                             maxLength={60}
-                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className={`w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500 disabled:border-gray-200 disabled:cursor-not-allowed`}
                             value={formData.incidentArea}
                             onChange={(e) => setFormData({ ...formData, incidentArea: e.target.value })}
+                            disabled={effectiveFieldReadOnly}
                         />
                     </div>
 
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
                         <select
-                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className={`w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500 disabled:border-gray-200 disabled:cursor-not-allowed`}
                             value={formData.category}
                             onChange={(e) => setFormData({ ...formData, category: e.target.value as IncidentCategory })}
+                            disabled={effectiveFieldReadOnly}
                         >
                             {Object.values(IncidentCategory).map((cat) => (
                                 <option key={cat} value={cat}>{cat}</option>
@@ -180,9 +210,10 @@ const IncidentForm = () => {
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
                         <select
-                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className={`w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500 disabled:border-gray-200 disabled:cursor-not-allowed`}
                             value={formData.priority}
                             onChange={(e) => setFormData({ ...formData, priority: e.target.value as IncidentPriority })}
+                            disabled={effectiveFieldReadOnly}
                         >
                             {Object.values(IncidentPriority).map((p) => (
                                 <option key={p} value={p}>{p}</option>
@@ -193,9 +224,10 @@ const IncidentForm = () => {
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Related Device</label>
                         <select
-                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className={`w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500 disabled:border-gray-200 disabled:cursor-not-allowed`}
                             value={formData.relatedDevice}
                             onChange={(e) => setFormData({ ...formData, relatedDevice: e.target.value as RelatedDevices })}
+                            disabled={effectiveFieldReadOnly}
                         >
                             {Object.values(RelatedDevices).map((d) => (
                                 <option key={d} value={d}>{d}</option>
@@ -209,9 +241,10 @@ const IncidentForm = () => {
                         <label className="block text-sm font-medium text-gray-700 mb-1">Reporter</label>
                         <select
                             required
-                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className={`w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500 disabled:border-gray-200 disabled:cursor-not-allowed`}
                             value={formData.reporterId}
                             onChange={(e) => setFormData({ ...formData, reporterId: e.target.value })}
+                            disabled={isUserRole || effectiveFieldReadOnly}
                         >
                             <option value="">Select User</option>
                             {users.map((user) => (
@@ -220,58 +253,68 @@ const IncidentForm = () => {
                         </select>
                     </div>
 
+                    {!isUserRole && (
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Assignee</label>
+                            <select
+                                className={`w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500 disabled:border-gray-200 disabled:cursor-not-allowed`}
+                                value={formData.assignedId}
+                                onChange={(e) => setFormData({ ...formData, assignedId: e.target.value })}
+                                disabled={effectiveFieldReadOnly}
+                            >
+                                <option value="">Unassigned</option>
+                                {users.filter(u => u.role !== 'user').map((user) => (
+                                    <option key={user.id} value={user.id}>{user.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+                </div>
+
+                {!isUserRole && (
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Assignee</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Related Problem</label>
                         <select
-                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            value={formData.assignedId}
-                            onChange={(e) => setFormData({ ...formData, assignedId: e.target.value })}
+                            className={`w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500 disabled:border-gray-200 disabled:cursor-not-allowed`}
+                            value={formData.relatedProblemId}
+                            onChange={(e) => setFormData({ ...formData, relatedProblemId: e.target.value })}
+                            disabled={effectiveFieldReadOnly}
                         >
-                            <option value="">Unassigned</option>
-                            {users.filter(u => u.role !== 'user').map((user) => (
-                                <option key={user.id} value={user.id}>{user.name}</option>
+                            <option value="">None</option>
+                            {problems.map((problem) => (
+                                <option key={problem.id} value={problem.id}>{problem.title}</option>
                             ))}
                         </select>
                     </div>
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Related Problem</label>
-                    <select
-                        className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        value={formData.relatedProblemId}
-                        onChange={(e) => setFormData({ ...formData, relatedProblemId: e.target.value })}
-                    >
-                        <option value="">None</option>
-                        {problems.map((problem) => (
-                            <option key={problem.id} value={problem.id}>{problem.title}</option>
-                        ))}
-                    </select>
-                </div>
+                )}
 
                 {isEdit && (
                     <>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                             <select
-                                className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                className={`w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500 disabled:border-gray-200 disabled:cursor-not-allowed`}
                                 value={formData.status}
                                 onChange={(e) => setFormData({ ...formData, status: e.target.value as IncidentStatus })}
+                                disabled={isUserRole || effectiveFieldReadOnly} // Users can only resolve/cancel via list actions
                             >
                                 {Object.values(IncidentStatus).map((s) => (
                                     <option key={s} value={s}>{s}</option>
                                 ))}
                             </select>
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Closure Notes</label>
-                            <textarea
-                                rows={3}
-                                className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                value={formData.closureNotes}
-                                onChange={(e) => setFormData({ ...formData, closureNotes: e.target.value })}
-                            />
-                        </div>
+                        {!isUserRole && (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Closure Notes</label>
+                                <textarea
+                                    rows={3}
+                                    className={`w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500 disabled:border-gray-200 disabled:cursor-not-allowed`}
+                                    value={formData.closureNotes}
+                                    onChange={(e) => setFormData({ ...formData, closureNotes: e.target.value })}
+                                    disabled={effectiveFieldReadOnly}
+                                />
+                            </div>
+                        )}
                     </>
                 )}
 
@@ -281,14 +324,16 @@ const IncidentForm = () => {
                         onClick={() => navigate('/incidents')}
                         className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                     >
-                        Cancel
+                        {isViewOnly ? 'Back' : 'Cancel'}
                     </button>
-                    <button
-                        type="submit"
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                        {isEdit ? 'Update Incident' : 'Create Incident'}
-                    </button>
+                    {!isViewOnly && (
+                        <button
+                            type="submit"
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                            {isEdit ? 'Update Incident' : 'Create Incident'}
+                        </button>
+                    )}
                 </div>
             </form>
         </div>
