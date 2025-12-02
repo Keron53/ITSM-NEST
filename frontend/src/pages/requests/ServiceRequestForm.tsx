@@ -264,9 +264,11 @@ const ServiceRequestForm = () => {
                                 value={formData.receiverId}
                                 onChange={(e) => {
                                     const newReceiverId = e.target.value;
+                                    const selectedReceiver = users.find(u => u.id.toString() === newReceiverId);
                                     setFormData(prev => ({
                                         ...prev,
                                         receiverId: newReceiverId,
+                                        destinationArea: selectedReceiver?.department || prev.destinationArea,
                                         status: (newReceiverId && prev.status === RequestStatus.PENDING)
                                             ? RequestStatus.IN_PROGRESS
                                             : prev.status
@@ -324,12 +326,21 @@ const ServiceRequestForm = () => {
                     >
                         {isGlobalViewOnly ? 'Back' : 'Cancel'}
                     </button>
-                    {!isGlobalViewOnly && (
+                    {!isGlobalViewOnly && !canReceiverEditPostComments && (
                         <button
                             type="submit"
                             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                         >
                             {isEdit ? 'Update Service Request' : 'Create Service Request'}
+                        </button>
+                    )}
+
+                    {(canReceiverEditPostComments || isAgentRequesterReceiverPostOnly) && (
+                        <button
+                            type="submit"
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                            Update Comments
                         </button>
                     )}
 

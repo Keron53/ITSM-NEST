@@ -103,19 +103,33 @@ const IncidentList = () => {
                     const isPending = item.status === IncidentStatus.PENDING;
 
                     // Permissions
-                    const canEdit = (isAdmin || (isAgent && (isReporter || isAssignee)) || (isUser && isReporter)) && isPending;
-                    // View only if NOT pending
+                    // Edit:
+                    // - Admin: Always
+                    // - User: If Reporter and Pending
+                    // - Agent: If Reporter and Pending. (Agent Assignee cannot edit fields, only status)
+                    const canEdit = isAdmin || (((isAgent && isReporter) || (isUser && isReporter)) && isPending);
+
+                    // View:
+                    // - If NOT pending (everyone)
+                    // - If Agent Assignee (always, since they can't edit fields)
+                    // Admin nunca ve el botón de vista
+                    const canView = !isAdmin && !canEdit && (
+                        isAgent ||
+                        (isUser && item.status !== IncidentStatus.PENDING)
+                    );
+
+                    const showActionButtons = isPending || (item.status === IncidentStatus.IN_PROGRESS && isAssignee);
 
                     return (
                         <div className="flex justify-end gap-2">
-                            {isPending && (
+                            {showActionButtons && (
                                 <>
                                     {/* Resolve Button - For Assignee (Agent) or Reporter (User) */}
                                     {((isAgent && isAssignee) || (isUser && isReporter)) && (
                                         <button
                                             onClick={() => handleStatusUpdate(item.id, IncidentStatus.RESOLVED)}
                                             className="text-green-600 hover:text-green-900 p-1 hover:bg-green-50 rounded"
-                                            title="Resolve (Accept)"
+                                            title="Resolve"
                                         >
                                             <CheckCircle size={18} />
                                         </button>
@@ -131,22 +145,22 @@ const IncidentList = () => {
                                             <XCircle size={18} />
                                         </button>
                                     )}
-
-                                    {/* Edit Button */}
-                                    {canEdit && (
-                                        <button
-                                            onClick={() => navigate(`/incidents/${item.id}/edit`)}
-                                            className="text-indigo-600 hover:text-indigo-900 p-1 hover:bg-indigo-50 rounded"
-                                            title="Edit"
-                                        >
-                                            <Edit2 size={18} />
-                                        </button>
-                                    )}
                                 </>
                             )}
 
-                            {/* View Button - Show if NOT Pending */}
-                            {!isPending && (
+                            {/* Edit Button - Moved outside isPending so Admin can edit anytime */}
+                            {canEdit && (
+                                <button
+                                    onClick={() => navigate(`/incidents/${item.id}/edit`)}
+                                    className="text-indigo-600 hover:text-indigo-900 p-1 hover:bg-indigo-50 rounded"
+                                    title="Edit"
+                                >
+                                    <Edit2 size={18} />
+                                </button>
+                            )}
+
+                            {/* View Button - Show if canView is true */}
+                            {canView && (
                                 <button
                                     onClick={() => navigate(`/incidents/${item.id}/edit`)}
                                     className="text-blue-600 hover:text-blue-900 p-1 hover:bg-blue-50 rounded"
