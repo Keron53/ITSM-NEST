@@ -262,7 +262,16 @@ const ServiceRequestForm = () => {
                             <select
                                 className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500"
                                 value={formData.receiverId}
-                                onChange={(e) => setFormData({ ...formData, receiverId: e.target.value })}
+                                onChange={(e) => {
+                                    const newReceiverId = e.target.value;
+                                    setFormData(prev => ({
+                                        ...prev,
+                                        receiverId: newReceiverId,
+                                        status: (newReceiverId && prev.status === RequestStatus.PENDING)
+                                            ? RequestStatus.IN_PROGRESS
+                                            : prev.status
+                                    }));
+                                }}
                                 disabled={isReceiverReadOnly}
                             >
                                 <option value="">Unassigned</option>

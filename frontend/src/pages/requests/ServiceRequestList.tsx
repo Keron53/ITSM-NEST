@@ -118,9 +118,11 @@ const ServiceRequestList = () => {
                         (isUser && item.status !== RequestStatus.PENDING)
                     );
 
+                    const showActionButtons = isPending || (item.status === RequestStatus.IN_PROGRESS && isAssignee);
+
                     return (
                         <div className="flex justify-end gap-2">
-                            {isPending && (
+                            {showActionButtons && (
                                 <>
                                     {/* Completed Button - Only for Assignee (Agent) */}
                                     {isAgent && (isAssignee || isRequester) && (
