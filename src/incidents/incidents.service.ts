@@ -168,12 +168,19 @@ export class IncidentsService {
       }
     }
 
+    // 3. Guardamos mezclando los datos anteriores, los nuevos y la relación
+    const finalStatus = updateIncidentDto.status || incident.status;
+    const isResolved = finalStatus === 'resolved';
+    const isCanceled = finalStatus === 'canceled';
+
     return await this.incidentRepository.save({
       ...incident,
       ...updateIncidentDto,
       assignee,
       reporter,
       relatedProblem,
+      resolutionDate: isResolved && !incident.resolutionDate ? new Date() : incident.resolutionDate,
+      closeDate: (isResolved || isCanceled) && !incident.closeDate ? new Date() : incident.closeDate,
     });
   }
 
