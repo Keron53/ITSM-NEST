@@ -108,11 +108,18 @@ export class ProblemsService {
       }
     }
 
+    const finalStatus = updateProblemDto.status || problem.status;
+    const isResolved = finalStatus === 'resolved';
+    const isCanceled = finalStatus === 'canceled';
+    const isClosed = finalStatus === 'closed';
+
     return await this.problemsRepository.save({
       ...problem,
       ...updateProblemDto,
       assignee,
       reporter,
+      resolutionDate: isResolved && !problem.resolutionDate ? new Date() : problem.resolutionDate,
+      closeDate: (isResolved || isCanceled || isClosed) && !problem.closeDate ? new Date() : problem.closeDate,
     });
   }
 

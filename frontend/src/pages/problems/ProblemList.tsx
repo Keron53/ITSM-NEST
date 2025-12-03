@@ -96,43 +96,58 @@ const ProblemList = () => {
                 data={problems}
                 columns={columns}
                 customActions={(item) => {
-                    const isAssignee = item.assignee?.id === user?.id;
-                    const isReporter = item.reporter?.id === user?.id;
-                    const canEdit = isAdmin || (isAgent && (isReporter || isAssignee));
-                    const canView = isAgent && !isReporter && !isAssignee;
-                    const showStatusActions = isAgent && isAssignee;
+                    const isAssignee = String(item.assignee?.id) === String(user?.id);
+                    const isReporter = String(item.reporter?.id) === String(user?.id);
+                    const isUser = user?.role === UserRole.USER;
+                    const isPending = item.status === ProblemStatus.PENDING;
+
+                    // Permissions
+                    // Edit:
+                    // - Admin: Always
+                    // - User: If Reporter and Pending
+                    // - Agent: If Reporter and Pending. (Agent Assignee cannot edit fields, only status)
+                    const canEdit = isAdmin || (((isAgent && isReporter) || (isUser && isReporter)) && isPending);
+
+                    // View:
+                    // - If NOT pending (everyone)
+                    // - If Agent Assignee (always, since they can't edit fields)
+                    // Admin nunca ve el botón de vista
+                    const canView = !isAdmin && !canEdit && (
+                        isAgent ||
+                        (isUser && item.status !== ProblemStatus.PENDING)
+                    );
+
+                    const showActionButtons = isPending || (item.status === ProblemStatus.IN_PROGRESS && isAssignee);
 
                     return (
                         <div className="flex justify-end gap-2">
-                            {showStatusActions && item.status !== ProblemStatus.RESOLVED && item.status !== ProblemStatus.CANCELED && (
+                            {showActionButtons && (
                                 <>
-                                    <button
-                                        onClick={() => handleStatusUpdate(item.id, ProblemStatus.RESOLVED)}
-                                        className="text-green-600 hover:text-green-900 p-1 hover:bg-green-50 rounded"
-                                        title="Resolved"
-                                    >
-                                        <CheckCircle size={18} />
-                                    </button>
-                                    <button
-                                        onClick={() => handleStatusUpdate(item.id, ProblemStatus.CANCELED)}
-                                        className="text-red-600 hover:text-red-900 p-1 hover:bg-red-50 rounded"
-                                        title="Canceled"
-                                    >
-                                        <XCircle size={18} />
-                                    </button>
+                                    {/* Resolve Button - For Assignee (Agent) or Reporter (User/Agent) */}
+                                    {((isAgent && isAssignee) || (isUser && isReporter) || (isAgent && isReporter)) && (
+                                        <button
+                                            onClick={() => handleStatusUpdate(item.id, ProblemStatus.RESOLVED)}
+                                            className="text-green-600 hover:text-green-900 p-1 hover:bg-green-50 rounded"
+                                            title="Resolve"
+                                        >
+                                            <CheckCircle size={18} />
+                                        </button>
+                                    )}
+
+                                    {/* Cancel Button - For Assignee or Reporter */}
+                                    {((isAgent && isAssignee) || (isUser && isReporter) || (isAgent && isReporter)) && (
+                                        <button
+                                            onClick={() => handleStatusUpdate(item.id, ProblemStatus.CANCELED)}
+                                            className="text-red-600 hover:text-red-900 p-1 hover:bg-red-50 rounded"
+                                            title="Cancel"
+                                        >
+                                            <XCircle size={18} />
+                                        </button>
+                                    )}
                                 </>
                             )}
 
-                            {canView && (
-                                <button
-                                    onClick={() => navigate(`/problems/${item.id}/edit`)}
-                                    className="text-blue-600 hover:text-blue-900 p-1 hover:bg-blue-50 rounded"
-                                    title="View"
-                                >
-                                    <Eye size={18} />
-                                </button>
-                            )}
-
+                            {/* Edit Button */}
                             {canEdit && (
                                 <button
                                     onClick={() => navigate(`/problems/${item.id}/edit`)}
@@ -140,6 +155,17 @@ const ProblemList = () => {
                                     title="Edit"
                                 >
                                     <Edit2 size={18} />
+                                </button>
+                            )}
+
+                            {/* View Button */}
+                            {canView && (
+                                <button
+                                    onClick={() => navigate(`/problems/${item.id}/edit`)}
+                                    className="text-blue-600 hover:text-blue-900 p-1 hover:bg-blue-50 rounded"
+                                    title="View"
+                                >
+                                    <Eye size={18} />
                                 </button>
                             )}
 
