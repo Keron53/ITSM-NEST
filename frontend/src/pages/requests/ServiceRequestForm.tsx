@@ -244,7 +244,15 @@ const ServiceRequestForm = () => {
                             required
                             className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500"
                             value={formData.requesterId}
-                            onChange={(e) => setFormData({ ...formData, requesterId: e.target.value })}
+                            onChange={(e) => {
+                                const newRequesterId = e.target.value;
+                                const selectedRequester = users.find(u => u.id.toString() === newRequesterId);
+                                setFormData(prev => ({
+                                    ...prev,
+                                    requesterId: newRequesterId,
+                                    originArea: (isAdmin && selectedRequester?.department) ? selectedRequester.department : prev.originArea
+                                }));
+                            }}
                             disabled={isRequesterReadOnly}
                         >
                             <option value="">Select User</option>
