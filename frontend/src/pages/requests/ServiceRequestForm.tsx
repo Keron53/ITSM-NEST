@@ -35,21 +35,27 @@ const ServiceRequestForm = () => {
         postComments: '',
     });
 
+    const [metadata, setMetadata] = useState<{
+        requestDate?: string;
+        assignedDate?: string;
+        completedDate?: string;
+    }>({});
+
     const [users, setUsers] = useState<User[]>([]);
 
     useEffect(() => {
         loadUsers();
         if (isEdit) {
             loadRequest();
-        } else if ((isUserRole || currentUser?.role === 'agent') && currentUser) {
-            // Set defaults for user AND agent role on creation
+        } else if (currentUser) {
+            // Set defaults for ALL roles on creation
             setFormData(prev => ({
                 ...prev,
                 requesterId: currentUser.id.toString(),
                 originArea: currentUser.department || '',
             }));
         }
-    }, [id, isUserRole, currentUser]);
+    }, [id, currentUser]);
 
     const loadUsers = async () => {
         try {
@@ -73,6 +79,11 @@ const ServiceRequestForm = () => {
                 requesterId: data.requester?.id.toString() || '',
                 receiverId: data.receiver?.id.toString() || '',
                 postComments: data.postComments || '',
+            });
+            setMetadata({
+                requestDate: data.requestDate,
+                assignedDate: data.assignedDate,
+                completedDate: data.completedDate,
             });
         } catch (error) {
             console.error('Error loading service request:', error);
@@ -105,6 +116,7 @@ const ServiceRequestForm = () => {
     const isAgent = currentUser?.role === 'agent';
     const isRequester = currentUser?.id.toString() === formData.requesterId;
     const isReceiver = currentUser?.id.toString() === formData.receiverId;
+    const isPending = formData.status === RequestStatus.PENDING;
 
     // Agent as Requester (Edit mode): Can edit Title, Origin, Priority.
     // Agent as Receiver (Edit mode): Can ONLY edit Post Comments if Completed/Canceled. Otherwise strict view only (actions in list).
@@ -157,7 +169,7 @@ const ServiceRequestForm = () => {
 
     const isDestinationReadOnly = !isAdmin && (isGlobalViewOnly || (isAgent && isEdit)); // Agent never edits destination? Plan said "Agent as Requester: Can edit Title, Origin, Priority". So Destination is RO.
     const isReceiverReadOnly = !isAdmin && (isGlobalViewOnly || (isAgent && isEdit)); // Agent never edits receiver?
-    const isRequesterReadOnly = !isAdmin; // Always read-only for User/Agent (set automatically)
+    const isRequesterReadOnly = true; // Always read-only for everyone
     const isPostCommentsReadOnly = !isAdmin && !(canReceiverEditPostComments || isAgentRequesterReceiverPostOnly);
 
 
@@ -209,7 +221,7 @@ const ServiceRequestForm = () => {
                         />
                     </div>
 
-                    {(!isUserRole && !(isAgent && !isEdit)) && (
+                    {(isEdit || isAdmin) && (!isUserRole || !isPending) && (
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Destination Area</label>
                             <input
@@ -264,7 +276,7 @@ const ServiceRequestForm = () => {
                 </div>
 
                 <div className="grid grid-cols-2 gap-6">
-                    {(!isUserRole && !(isAgent && !isEdit)) && (
+                    {(isEdit || isAdmin) && (!isUserRole || !isPending) && (
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Receiver</label>
                             <select
@@ -292,7 +304,7 @@ const ServiceRequestForm = () => {
                         </div>
                     )}
 
-                    {isEdit && (
+                    {(isEdit || isAdmin) && (!isUserRole || !isPending) && (
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                             <select
@@ -312,7 +324,7 @@ const ServiceRequestForm = () => {
 
 
                 {
-                    isEdit && !isUserRole && (
+                    isEdit && (!isUserRole || !isPending) && (
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Post Comments</label>
                             <textarea
@@ -325,6 +337,27 @@ const ServiceRequestForm = () => {
                         </div>
                     )
                 }
+
+                {isEdit && (!isUserRole || !isPending) && (
+                    <div className="grid grid-cols-3 gap-6 pt-4 border-t border-gray-100">
+                        <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">Requested On</label>
+                            <p className="text-sm text-gray-700">{metadata.requestDate ? new Date(metadata.requestDate).toLocaleString() : '-'}</p>
+                        </div>
+                        {metadata.assignedDate && (
+                            <div>
+                                <label className="block text-xs font-medium text-gray-500 mb-1">Assigned On</label>
+                                <p className="text-sm text-gray-700">{new Date(metadata.assignedDate).toLocaleString()}</p>
+                            </div>
+                        )}
+                        {metadata.completedDate && (
+                            <div>
+                                <label className="block text-xs font-medium text-gray-500 mb-1">Completed On</label>
+                                <p className="text-sm text-gray-700">{new Date(metadata.completedDate).toLocaleString()}</p>
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 <div className="flex justify-end gap-4 pt-4">
                     <button

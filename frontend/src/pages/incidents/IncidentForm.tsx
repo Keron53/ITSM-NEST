@@ -41,6 +41,12 @@ const IncidentForm = () => {
         closureNotes: '',
     });
 
+    const [metadata, setMetadata] = useState<{
+        reportDate?: string;
+        resolutionDate?: string;
+        closeDate?: string;
+    }>({});
+
     const [users, setUsers] = useState<User[]>([]);
     const [problems, setProblems] = useState<Problem[]>([]);
 
@@ -49,15 +55,15 @@ const IncidentForm = () => {
         loadProblemsList();
         if (isEdit) {
             loadIncident();
-        } else if ((isUserRole || isAgent) && currentUser) {
-            // Set defaults for user AND agent role on creation
+        } else if (currentUser) {
+            // Set defaults for ALL roles on creation
             setFormData(prev => ({
                 ...prev,
                 reporterId: currentUser.id.toString(),
                 incidentArea: currentUser.department || '',
             }));
         }
-    }, [id, isUserRole, isAgent, currentUser]);
+    }, [id, currentUser]);
 
     const loadUsers = async () => {
         try {
@@ -92,6 +98,11 @@ const IncidentForm = () => {
                 assignedId: data.assignee?.id.toString() || '',
                 relatedProblemId: data.relatedProblem?.id.toString() || '',
                 closureNotes: data.closureNotes || '',
+            });
+            setMetadata({
+                reportDate: data.reportDate,
+                resolutionDate: data.resolutionDate,
+                closeDate: data.closeDate,
             });
         } catch (error) {
             console.error('Error loading incident:', error);
@@ -144,8 +155,7 @@ const IncidentForm = () => {
         isAgent &&
         isReporter &&
         isAssignee &&
-        (formData.status === IncidentStatus.RESOLVED || formData.status === IncidentStatus.CANCELED) &&
-        !formData.closureNotes;
+        (formData.status === IncidentStatus.RESOLVED || formData.status === IncidentStatus.CANCELED);
 
     // Global View Only si:
     // - Usuario normal y estado ≠ pending
@@ -163,8 +173,7 @@ const IncidentForm = () => {
         isAgent &&
         isAssignee &&
         !isReporter &&
-        (formData.status === IncidentStatus.RESOLVED || formData.status === IncidentStatus.CANCELED) &&
-        !formData.closureNotes;
+        (formData.status === IncidentStatus.RESOLVED || formData.status === IncidentStatus.CANCELED);
 
     // Field specific ReadOnly logic
     const isTitleReadOnly = !isAdmin && (isGlobalViewOnly || (isAgent && isEdit && !isReporter));
@@ -174,9 +183,9 @@ const IncidentForm = () => {
     const isPriorityReadOnly = !isAdmin && (isGlobalViewOnly || (isAgent && isEdit && !isReporter));
     const isDeviceReadOnly = !isAdmin && (isGlobalViewOnly || (isAgent && isEdit && !isReporter));
 
-    const isReporterReadOnly = !isAdmin; // Always read-only for User/Agent
+    const isReporterReadOnly = true; // Always read-only.
     const isAssigneeReadOnly = !isAdmin; // Only Admin can assign
-    const isRelatedProblemReadOnly = !isAdmin && (isGlobalViewOnly || (isAgent && isEdit)); // Agent never edits related problem? Assuming similar to destination area/receiver in SR.
+    const isRelatedProblemReadOnly = !isAdmin && (isGlobalViewOnly || (isAgent && isEdit)) && !(canAssigneeEditClosureNotes || isAgentReporterAssigneeClosureOnly);
 
     const isClosureNotesReadOnly = !isAdmin && !(canAssigneeEditClosureNotes || isAgentReporterAssigneeClosureOnly);
 
@@ -294,7 +303,7 @@ const IncidentForm = () => {
                         </select>
                     </div>
 
-                    {!isUserRole && (
+                    {(isEdit || !isUserRole) && (
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Assignee</label>
                             <select
@@ -321,7 +330,7 @@ const IncidentForm = () => {
                     )}
                 </div>
 
-                {!isUserRole && (
+                {(isEdit || !isUserRole) && (
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Related Problem</label>
                         <select
@@ -338,34 +347,54 @@ const IncidentForm = () => {
                     </div>
                 )}
 
+                {(isEdit || isAdmin) && (
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                        <select
+                            className={`w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500 disabled:border-gray-200 disabled:cursor-not-allowed`}
+                            value={formData.status}
+                            onChange={(e) => setFormData({ ...formData, status: e.target.value as IncidentStatus })}
+                            disabled={!isAdmin} // Status is read-only unless admin
+                        >
+                            {Object.values(IncidentStatus).map((s) => (
+                                <option key={s} value={s}>{s}</option>
+                            ))}
+                        </select>
+                    </div>
+                )}
+
                 {isEdit && (
-                    <>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Closure Notes</label>
+                        <textarea
+                            rows={3}
+                            className={`w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500 disabled:border-gray-200 disabled:cursor-not-allowed`}
+                            value={formData.closureNotes}
+                            onChange={(e) => setFormData({ ...formData, closureNotes: e.target.value })}
+                            disabled={isClosureNotesReadOnly}
+                        />
+                    </div>
+                )}
+
+                {isEdit && (
+                    <div className="grid grid-cols-3 gap-6 pt-4 border-t border-gray-100">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                            <select
-                                className={`w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500 disabled:border-gray-200 disabled:cursor-not-allowed`}
-                                value={formData.status}
-                                onChange={(e) => setFormData({ ...formData, status: e.target.value as IncidentStatus })}
-                                disabled={!isAdmin} // Status is read-only unless admin
-                            >
-                                {Object.values(IncidentStatus).map((s) => (
-                                    <option key={s} value={s}>{s}</option>
-                                ))}
-                            </select>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">Reported On</label>
+                            <p className="text-sm text-gray-700">{metadata.reportDate ? new Date(metadata.reportDate).toLocaleString() : '-'}</p>
                         </div>
-                        {!isUserRole && (
+                        {metadata.resolutionDate && (
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Closure Notes</label>
-                                <textarea
-                                    rows={3}
-                                    className={`w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500 disabled:border-gray-200 disabled:cursor-not-allowed`}
-                                    value={formData.closureNotes}
-                                    onChange={(e) => setFormData({ ...formData, closureNotes: e.target.value })}
-                                    disabled={isClosureNotesReadOnly}
-                                />
+                                <label className="block text-xs font-medium text-gray-500 mb-1">Resolved On</label>
+                                <p className="text-sm text-gray-700">{new Date(metadata.resolutionDate).toLocaleString()}</p>
                             </div>
                         )}
-                    </>
+                        {metadata.closeDate && (
+                            <div>
+                                <label className="block text-xs font-medium text-gray-500 mb-1">Closed On</label>
+                                <p className="text-sm text-gray-700">{new Date(metadata.closeDate).toLocaleString()}</p>
+                            </div>
+                        )}
+                    </div>
                 )}
 
                 <div className="flex justify-end gap-4 pt-4">
@@ -389,7 +418,7 @@ const IncidentForm = () => {
                             type="submit"
                             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                         >
-                            Update Closure Notes
+                            Update Incident
                         </button>
                     )}
                 </div>

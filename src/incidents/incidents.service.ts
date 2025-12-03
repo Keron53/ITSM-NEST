@@ -113,7 +113,7 @@ export class IncidentsService {
 
       if (isAssignee && !isReporter) {
         // Filter DTO to only allow status and closureNotes (if applicable)
-        const { status, closureNotes, ...others } = updateIncidentDto;
+        const { status, closureNotes, relatedProblem, ...others } = updateIncidentDto;
 
         const newDto: UpdateIncidentDto = {};
         if (status) newDto.status = status;
@@ -123,6 +123,9 @@ export class IncidentsService {
 
         if (closureNotes && isResolvedOrCanceled) {
           newDto.closureNotes = closureNotes;
+        }
+        if (relatedProblem && isResolvedOrCanceled) {
+          newDto.relatedProblem = relatedProblem;
         }
 
         // Use the filtered DTO

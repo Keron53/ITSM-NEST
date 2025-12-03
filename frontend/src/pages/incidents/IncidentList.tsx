@@ -124,8 +124,8 @@ const IncidentList = () => {
                         <div className="flex justify-end gap-2">
                             {showActionButtons && (
                                 <>
-                                    {/* Resolve Button - For Assignee (Agent) or Reporter (User) */}
-                                    {((isAgent && isAssignee) || (isUser && isReporter)) && (
+                                    {/* Resolve Button - For Assignee (Agent) or Reporter (User/Agent) */}
+                                    {((isAgent && isAssignee) || (isUser && isReporter) || (isAgent && isReporter)) && (
                                         <button
                                             onClick={() => handleStatusUpdate(item.id, IncidentStatus.RESOLVED)}
                                             className="text-green-600 hover:text-green-900 p-1 hover:bg-green-50 rounded"

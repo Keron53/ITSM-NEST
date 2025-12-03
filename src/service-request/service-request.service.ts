@@ -188,11 +188,16 @@ export class ServiceRequestService {
     }
 
     // 3. Guardamos mezclando los datos anteriores, los nuevos y la relación
+    const finalStatus = updateServiceRequestDto.status || serviceRequest.status;
+    const isCompletedOrCanceled = finalStatus === 'completed' || finalStatus === 'canceled';
+
     return await this.serviceRequestRepository.save({
       ...serviceRequest,
       ...updateServiceRequestDto,
       receiver, // Si receiver es undefined, TypeORM ignora esta línea y no borra el existente
       requester,
+      assignedDate: receiver ? new Date() : serviceRequest.assignedDate, // Update assignedDate if receiver is set
+      completedDate: isCompletedOrCanceled && !serviceRequest.completedDate ? new Date() : serviceRequest.completedDate, // Set completedDate if finishing and not already set
     });
   }
 
