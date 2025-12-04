@@ -9,6 +9,7 @@ import { useAuth } from '../../context/AuthContext';
 const ChangeRequestForm = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { user: currentUser } = useAuth();
     const isEdit = !!id;
 
     const [formData, setFormData] = useState({
@@ -33,8 +34,15 @@ const ChangeRequestForm = () => {
         loadUsers();
         if (isEdit) {
             loadChange();
+        } else if (currentUser) {
+            // Set defaults
+            setFormData(prev => ({
+                ...prev,
+                requesterId: currentUser.id.toString(),
+                area: currentUser.department || '',
+            }));
         }
-    }, [id]);
+    }, [id, currentUser]);
 
     const loadUsers = async () => {
         try {
@@ -81,6 +89,7 @@ const ChangeRequestForm = () => {
                 requesterId: Number(formData.requesterId),
                 assignedId: formData.assignedId ? Number(formData.assignedId) : undefined,
                 approverId: formData.approverId ? Number(formData.approverId) : undefined,
+                closureNotes: formData.closureNotes || undefined,
             };
 
             if (isEdit) {
@@ -94,18 +103,63 @@ const ChangeRequestForm = () => {
         }
     };
 
-    const { user } = useAuth();
-    const isAgent = user?.role === 'agent';
-    const isRequester = user?.id === Number(formData.requesterId);
-    const isAssignee = user?.id === Number(formData.assignedId);
+    const isAdmin = currentUser?.role === 'admin';
+    const isAgent = currentUser?.role === 'agent';
 
-    const disableGeneralFields = isEdit && isAgent && !isRequester;
-    const disableStatus = isEdit && isAgent && !isRequester && !isAssignee;
+    const isRequester = currentUser?.id.toString() === formData.requesterId;
+    const isAssignee = currentUser?.id.toString() === formData.assignedId;
+    const isApprover = currentUser?.id.toString() === formData.approverId;
+    const isPending = formData.status === ChangeStatus.REQUESTED;
+
+    // View Logic
+    // Agent blocked if Requester and NOT Pending (can only view read-only) -> Actually, "Blocked View" in Incident meant they couldn't see it at all? 
+    // In Incident: "isAgentBlockedView = isAgent && isReporter && !isPending" -> This was used to force "Global View Only".
+    // So they CAN see it, but it's Read Only.
+
+    const isAgentBlockedView = isAgent && isRequester && !isPending;
+
+    // Global View Only if:
+    // - Not Admin AND
+    // - (Agent & Edit & Not Related) OR
+    // - (Agent & Requester & Not Pending)
+    const isGlobalViewOnly = !isAdmin && (
+        (isAgent && isEdit && !isRequester && !isAssignee && !isApprover) ||
+        isAgentBlockedView
+    );
+
+    // Field Locking
+    // General fields are read-only if Global View Only OR (Agent & Edit & Not Requester)
+    // i.e. Only Admin or Requester (when Pending) can edit general fields.
+    const isGeneralReadOnly = !isAdmin && (isGlobalViewOnly || (isAgent && isEdit && !isRequester));
+
+    // User Selects: Only Admin can change Requester, Assignee, Approver.
+    // Exception: Maybe Requester can change Assignee/Approver? Usually no, Admin assigns.
+    const isUserSelectReadOnly = !isAdmin;
+    const isRequesterReadOnly = true; // Always read-only (set on creation)
+
+    // Status: Only Admin can change status via dropdown. 
+    // Agents use buttons in List.
+    const isStatusReadOnly = !isAdmin;
+
+    // Closure Notes
+    // Editable by Assignee if in Implementation/Completed/Failed phase.
+    // Or Admin.
+    const canAssigneeEditClosure = isAssignee && (
+        formData.status === ChangeStatus.IMPLEMENTATION ||
+        formData.status === ChangeStatus.COMPLETED ||
+        formData.status === ChangeStatus.FAILED
+    );
+    const isClosureNotesReadOnly = !isAdmin && !canAssigneeEditClosure;
+
 
     return (
         <div className="max-w-3xl mx-auto bg-white p-8 rounded-xl border border-gray-200 shadow-sm">
             <h2 className="text-2xl font-bold text-gray-800 mb-6">
-                {isEdit ? 'Edit Change Request' : 'New Change Request'}
+                {isEdit
+                    ? isGlobalViewOnly
+                        ? 'Change Request Information'
+                        : 'Edit Change Request'
+                    : 'New Change Request'}
             </h2>
 
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -115,8 +169,8 @@ const ChangeRequestForm = () => {
                         <input
                             type="text"
                             required
-                            disabled={disableGeneralFields}
-                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
+                            disabled={isGeneralReadOnly}
+                            className={`w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500 disabled:border-gray-200 disabled:cursor-not-allowed`}
                             value={formData.title}
                             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                         />
@@ -127,8 +181,8 @@ const ChangeRequestForm = () => {
                         <textarea
                             required
                             rows={3}
-                            disabled={disableGeneralFields}
-                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
+                            disabled={isGeneralReadOnly}
+                            className={`w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500 disabled:border-gray-200 disabled:cursor-not-allowed`}
                             value={formData.description}
                             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                         />
@@ -138,8 +192,8 @@ const ChangeRequestForm = () => {
                         <label className="block text-sm font-medium text-gray-700 mb-1">Justification</label>
                         <textarea
                             rows={2}
-                            disabled={disableGeneralFields}
-                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
+                            disabled={isGeneralReadOnly}
+                            className={`w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500 disabled:border-gray-200 disabled:cursor-not-allowed`}
                             value={formData.justification}
                             onChange={(e) => setFormData({ ...formData, justification: e.target.value })}
                         />
@@ -148,8 +202,8 @@ const ChangeRequestForm = () => {
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
                         <select
-                            disabled={disableGeneralFields}
-                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
+                            disabled={isGeneralReadOnly}
+                            className={`w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500 disabled:border-gray-200 disabled:cursor-not-allowed`}
                             value={formData.type}
                             onChange={(e) => setFormData({ ...formData, type: e.target.value as ChangeType })}
                         >
@@ -162,8 +216,8 @@ const ChangeRequestForm = () => {
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
                         <select
-                            disabled={disableGeneralFields}
-                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
+                            disabled={isGeneralReadOnly}
+                            className={`w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500 disabled:border-gray-200 disabled:cursor-not-allowed`}
                             value={formData.priority}
                             onChange={(e) => setFormData({ ...formData, priority: e.target.value as ChangePriority })}
                         >
@@ -178,8 +232,8 @@ const ChangeRequestForm = () => {
                         <input
                             type="text"
                             required
-                            disabled={disableGeneralFields}
-                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
+                            disabled={isGeneralReadOnly}
+                            className={`w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500 disabled:border-gray-200 disabled:cursor-not-allowed`}
                             value={formData.area}
                             onChange={(e) => setFormData({ ...formData, area: e.target.value })}
                         />
@@ -189,8 +243,8 @@ const ChangeRequestForm = () => {
                         <label className="block text-sm font-medium text-gray-700 mb-1">Requester</label>
                         <select
                             required
-                            disabled={disableGeneralFields}
-                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
+                            disabled={isRequesterReadOnly}
+                            className={`w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500 disabled:border-gray-200 disabled:cursor-not-allowed`}
                             value={formData.requesterId}
                             onChange={(e) => setFormData({ ...formData, requesterId: e.target.value })}
                         >
@@ -206,8 +260,8 @@ const ChangeRequestForm = () => {
                         <textarea
                             required
                             rows={3}
-                            disabled={disableGeneralFields}
-                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
+                            disabled={isGeneralReadOnly}
+                            className={`w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500 disabled:border-gray-200 disabled:cursor-not-allowed`}
                             value={formData.implementationPlan}
                             onChange={(e) => setFormData({ ...formData, implementationPlan: e.target.value })}
                         />
@@ -218,8 +272,8 @@ const ChangeRequestForm = () => {
                         <textarea
                             required
                             rows={3}
-                            disabled={disableGeneralFields}
-                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
+                            disabled={isGeneralReadOnly}
+                            className={`w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500 disabled:border-gray-200 disabled:cursor-not-allowed`}
                             value={formData.rollbackPlan}
                             onChange={(e) => setFormData({ ...formData, rollbackPlan: e.target.value })}
                         />
@@ -228,8 +282,8 @@ const ChangeRequestForm = () => {
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Assignee</label>
                         <select
-                            disabled={disableGeneralFields}
-                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
+                            disabled={isUserSelectReadOnly}
+                            className={`w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500 disabled:border-gray-200 disabled:cursor-not-allowed`}
                             value={formData.assignedId}
                             onChange={(e) => setFormData({ ...formData, assignedId: e.target.value })}
                         >
@@ -243,8 +297,8 @@ const ChangeRequestForm = () => {
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Approver</label>
                         <select
-                            disabled={disableGeneralFields}
-                            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
+                            disabled={isUserSelectReadOnly}
+                            className={`w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500 disabled:border-gray-200 disabled:cursor-not-allowed`}
                             value={formData.approverId}
                             onChange={(e) => setFormData({ ...formData, approverId: e.target.value })}
                         >
@@ -255,32 +309,33 @@ const ChangeRequestForm = () => {
                         </select>
                     </div>
 
+                    {(isEdit || isAdmin) && (
+                        <div className="col-span-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                            <select
+                                disabled={isStatusReadOnly}
+                                className={`w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500 disabled:border-gray-200 disabled:cursor-not-allowed`}
+                                value={formData.status}
+                                onChange={(e) => setFormData({ ...formData, status: e.target.value as ChangeStatus })}
+                            >
+                                {Object.values(ChangeStatus).map((s) => (
+                                    <option key={s} value={s}>{s}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+
                     {isEdit && (
-                        <>
-                            <div className="col-span-2">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                                <select
-                                    disabled={disableStatus}
-                                    className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
-                                    value={formData.status}
-                                    onChange={(e) => setFormData({ ...formData, status: e.target.value as ChangeStatus })}
-                                >
-                                    {Object.values(ChangeStatus).map((s) => (
-                                        <option key={s} value={s}>{s}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="col-span-2">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Closure Notes</label>
-                                <textarea
-                                    rows={3}
-                                    disabled={disableStatus}
-                                    className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
-                                    value={formData.closureNotes}
-                                    onChange={(e) => setFormData({ ...formData, closureNotes: e.target.value })}
-                                />
-                            </div>
-                        </>
+                        <div className="col-span-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Closure Notes</label>
+                            <textarea
+                                rows={3}
+                                disabled={isClosureNotesReadOnly}
+                                className={`w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500 disabled:border-gray-200 disabled:cursor-not-allowed`}
+                                value={formData.closureNotes}
+                                onChange={(e) => setFormData({ ...formData, closureNotes: e.target.value })}
+                            />
+                        </div>
                     )}
                 </div>
 
@@ -290,9 +345,9 @@ const ChangeRequestForm = () => {
                         onClick={() => navigate('/changes')}
                         className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                     >
-                        Cancel
+                        {isGlobalViewOnly ? 'Back' : 'Cancel'}
                     </button>
-                    {!disableStatus && (
+                    {!isGlobalViewOnly && (
                         <button
                             type="submit"
                             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
