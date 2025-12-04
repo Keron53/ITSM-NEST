@@ -26,9 +26,24 @@ export class ChangeRequestService {
       throw new BadRequestException('Requester (User) not found');
     }
 
+    let assignee;
+    if (createChangeRequestDto.assignedId) {
+      assignee = await this.userRepository.findOneBy({ id: createChangeRequestDto.assignedId });
+      if (!assignee) throw new BadRequestException('Assignee user not found');
+      if (assignee.role === 'user') throw new BadRequestException('Assignee must be an agent or admin');
+    }
+
+    let approver;
+    if (createChangeRequestDto.approverId) {
+      approver = await this.userRepository.findOneBy({ id: createChangeRequestDto.approverId });
+      if (!approver) throw new BadRequestException('Approver user not found');
+    }
+
     const changeRequest = this.changeRequestRepository.create({
       ...createChangeRequestDto,
       requester,
+      assignee,
+      approver,
     });
 
     return await this.changeRequestRepository.save(changeRequest);
