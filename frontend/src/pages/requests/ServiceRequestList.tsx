@@ -174,16 +174,6 @@ const ServiceRequestList = () => {
                                             </button>
                                         )}
 
-                                        {isUser && isRequester && (
-                                            <button
-                                                onClick={() => handleStatusUpdate(item.id, RequestStatus.COMPLETED)}
-                                                className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
-                                                title="Mark as Completed"
-                                            >
-                                                <CheckCircle size={16} /> Complete
-                                            </button>
-                                        )}
-
                                         {((isAgent && isAssignee) || (isUser && isRequester) || (isAgent && isRequester)) && (
                                             <button
                                                 onClick={() => handleStatusUpdate(item.id, RequestStatus.CANCELED)}
