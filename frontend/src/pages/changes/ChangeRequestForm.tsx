@@ -116,21 +116,25 @@ const ChangeRequestForm = () => {
     // In Incident: "isAgentBlockedView = isAgent && isReporter && !isPending" -> This was used to force "Global View Only".
     // So they CAN see it, but it's Read Only.
 
-    const isAgentBlockedView = isAgent && isRequester && !isPending;
+    const canAssigneeEditClosure = isAssignee && (
+        formData.status === ChangeStatus.COMPLETED ||
+        formData.status === ChangeStatus.FAILED
+    );
+
+    const isAgentBlockedView = isAgent && isRequester && (!isPending || !!formData.assignedId || !!formData.approverId);
 
     // Global View Only if:
     // - Not Admin AND
     // - (Agent & Edit & Not Related) OR
-    // - (Agent & Requester & Not Pending)
+    // - (Agent & Requester & Not Pending) -> UNLESS they can edit closure notes
     const isGlobalViewOnly = !isAdmin && (
         (isAgent && isEdit && !isRequester && !isAssignee && !isApprover) ||
-        isAgentBlockedView
+        (isAgentBlockedView && !canAssigneeEditClosure)
     );
 
     // Field Locking
-    // General fields are read-only if Global View Only OR (Agent & Edit & Not Requester)
-    // i.e. Only Admin or Requester (when Pending) can edit general fields.
-    const isGeneralReadOnly = !isAdmin && (isGlobalViewOnly || (isAgent && isEdit && !isRequester));
+    // General fields are read-only if Global View Only OR (Agent & Edit & Not Requester) OR (Agent Blocked View)
+    const isGeneralReadOnly = !isAdmin && (isGlobalViewOnly || (isAgent && isEdit && !isRequester) || isAgentBlockedView);
 
     // User Selects: Only Admin can change Requester, Assignee, Approver.
     // Exception: Maybe Requester can change Assignee/Approver? Usually no, Admin assigns.
@@ -141,14 +145,6 @@ const ChangeRequestForm = () => {
     // Agents use buttons in List.
     const isStatusReadOnly = !isAdmin;
 
-    // Closure Notes
-    // Editable by Assignee if in Implementation/Completed/Failed phase.
-    // Or Admin.
-    const canAssigneeEditClosure = isAssignee && (
-        formData.status === ChangeStatus.IMPLEMENTATION ||
-        formData.status === ChangeStatus.COMPLETED ||
-        formData.status === ChangeStatus.FAILED
-    );
     const isClosureNotesReadOnly = !isAdmin && !canAssigneeEditClosure;
 
 

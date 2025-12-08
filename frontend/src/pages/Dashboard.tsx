@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AlertCircle, AlertTriangle, CheckCircle, Clock, Activity, ArrowUpRight, ArrowDownRight, Server, Database, Shield } from 'lucide-react';
+import { AlertCircle, AlertTriangle, CheckCircle, Clock, Activity, ArrowUpRight, Server, Database, Shield } from 'lucide-react';
 import { getIncidents } from '../services/incidents.service';
 import { getProblems } from '../services/problems.service';
 import { getServiceRequests } from '../services/service-request.service';
@@ -73,7 +73,7 @@ const Dashboard = () => {
         fetchData();
     }, []);
 
-    const StatCard = ({ title, value, icon: Icon, color, gradient }: any) => (
+    const StatCard = ({ title, value, icon: Icon, gradient }: any) => (
         <div className={`relative overflow-hidden rounded-2xl p-6 text-white shadow-lg transition-transform hover:scale-105 ${gradient}`}>
             <div className="absolute right-0 top-0 -mr-4 -mt-4 h-24 w-24 rounded-full bg-white opacity-10 blur-xl"></div>
             <div className="relative z-10 flex justify-between items-start">

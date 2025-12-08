@@ -164,7 +164,7 @@ const IncidentList = () => {
                             <div className="flex flex-wrap gap-2 mt-auto pt-4 border-t border-black/10">
                                 {showActionButtons && (
                                     <>
-                                        {((isAgent && isAssignee) || (isUser && isReporter) || (isAgent && isReporter)) && (
+                                        {((isAgent && isAssignee) || (isAgent && isReporter)) && (
                                             <button
                                                 onClick={() => handleStatusUpdate(item.id, IncidentStatus.RESOLVED)}
                                                 className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"

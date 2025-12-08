@@ -13,3 +13,37 @@ services:
       - ./mysql:/var/lib/mysql
     ports:
       - "3307:3306"
+    networks:
+      - app-network
+
+  backend:
+    build: .
+    container_name: nest_backend
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USERNAME: user_crud
+      DB_PASSWORD: root
+      DB_DATABASE: db_crud
+    depends_on:
+      - mysql
+    networks:
+      - app-network
+
+  frontend:
+    build: ./frontend
+    container_name: react_frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
