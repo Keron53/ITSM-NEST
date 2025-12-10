@@ -4,15 +4,34 @@ import { useNavigate } from 'react-router-dom';
 import { getChangeRequests, deleteChangeRequest, updateChangeRequest } from '../../services/change-request.service';
 import { type ChangeRequest, ChangeStatus, ChangePriority, UserRole } from '../../types';
 import { useAuth } from '../../context/AuthContext';
+import { useSocket } from '../../context/SocketContext';
 
 const ChangeRequestList = () => {
     const [changes, setChanges] = useState<ChangeRequest[]>([]);
     const navigate = useNavigate();
     const { user } = useAuth();
+    const { socket } = useSocket();
 
     useEffect(() => {
         loadChanges();
     }, []);
+
+    useEffect(() => {
+        if (!socket) return;
+
+        socket.on('change_request_updated', () => {
+            loadChanges();
+        });
+
+        socket.on('change_request_deleted', () => {
+            loadChanges();
+        });
+
+        return () => {
+            socket.off('change_request_updated');
+            socket.off('change_request_deleted');
+        };
+    }, [socket]);
 
     const loadChanges = async () => {
         try {

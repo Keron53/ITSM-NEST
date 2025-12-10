@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { CreateServiceRequestDto } from './dto/create-service-request.dto';
 import { UpdateServiceRequestDto } from './dto/update-service-request.dto';
+import { AppGateway } from '../gateways/app.gateway';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { ServiceRequest } from './entities/service-request.entity';
@@ -15,6 +16,7 @@ export class ServiceRequestService {
 
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    private readonly appGateway: AppGateway,
   ) { }
 
   async create(createServiceRequestDto: CreateServiceRequestDto, user: any) {
@@ -38,7 +40,10 @@ export class ServiceRequestService {
       requester, // TypeORM guardará la relación automáticamente
     });
 
-    return await this.serviceRequestRepository.save(serviceRequest);
+
+    const saved = await this.serviceRequestRepository.save(serviceRequest);
+    this.appGateway.server.emit('service_request_updated');
+    return saved;
   }
 
   async findAll(user: any) {
@@ -191,7 +196,7 @@ export class ServiceRequestService {
     const finalStatus = updateServiceRequestDto.status || serviceRequest.status;
     const isCompletedOrCanceled = finalStatus === 'completed' || finalStatus === 'canceled';
 
-    return await this.serviceRequestRepository.save({
+    const saved = await this.serviceRequestRepository.save({
       ...serviceRequest,
       ...updateServiceRequestDto,
       receiver, // Si receiver es undefined, TypeORM ignora esta línea y no borra el existente
@@ -199,9 +204,13 @@ export class ServiceRequestService {
       assignedDate: receiver ? new Date() : serviceRequest.assignedDate, // Update assignedDate if receiver is set
       completedDate: isCompletedOrCanceled && !serviceRequest.completedDate ? new Date() : serviceRequest.completedDate, // Set completedDate if finishing and not already set
     });
+    this.appGateway.server.emit('service_request_updated');
+    return saved;
   }
 
   async remove(id: number) {
-    return await this.serviceRequestRepository.softDelete(id);
+    const result = await this.serviceRequestRepository.softDelete(id);
+    this.appGateway.server.emit('service_request_deleted', id);
+    return result;
   }
 }

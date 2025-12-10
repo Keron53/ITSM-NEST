@@ -1,7 +1,15 @@
 import axios from 'axios';
 
+declare global {
+    interface Window {
+        APP_CONFIG: {
+            API_URL: string;
+        };
+    }
+}
+
 const api = axios.create({
-    baseURL: 'http://localhost:3000/api/v1', // Adjust if your backend runs on a different port
+    baseURL: window.APP_CONFIG?.API_URL || 'http://localhost:3000/api/v1',
     headers: {
         'Content-Type': 'application/json',
     },

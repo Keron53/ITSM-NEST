@@ -6,10 +6,12 @@ import { ChangeRequest } from './entities/change-request.entity';
 import { UsersService } from 'src/users/users.service';
 import { UsersModule } from 'src/users/users.module';
 
+import { AppGateway } from '../gateways/app.gateway';
+
 @Module({
   imports: [TypeOrmModule.forFeature([ChangeRequest]), UsersModule],
   controllers: [ChangeRequestController],
-  providers: [ChangeRequestService, UsersService],
+  providers: [ChangeRequestService, UsersService, AppGateway],
   exports: [],
 })
 export class ChangeRequestModule { }

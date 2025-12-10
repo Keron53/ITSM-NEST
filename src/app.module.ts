@@ -9,6 +9,8 @@ import { ServiceRequestModule } from './service-request/service-request.module';
 import { ChangeRequestModule } from './change-request/change-request.module';
 import { AuthModule } from './auth/auth.module';
 
+import { AppGateway } from './gateways/app.gateway';
+
 @Module({
   imports: [
     TypeOrmModule.forRoot({
@@ -29,6 +31,6 @@ import { AuthModule } from './auth/auth.module';
     AuthModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, AppGateway],
 })
 export class AppModule { }

@@ -8,10 +8,12 @@ import { UsersService } from 'src/users/users.service';
 import { ProblemsModule } from 'src/problems/problems.module';
 import { ProblemsService } from 'src/problems/problems.service';
 
+import { AppGateway } from '../gateways/app.gateway';
+
 @Module({
   imports: [TypeOrmModule.forFeature([Incident]), UsersModule, ProblemsModule],
   controllers: [IncidentsController],
-  providers: [IncidentsService, UsersService, ProblemsService],
+  providers: [IncidentsService, UsersService, ProblemsService, AppGateway],
   exports: [],
 })
 export class IncidentsModule { }

@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { CreateIncidentDto } from './dto/create-incident.dto';
 import { UpdateIncidentDto } from './dto/update-incident.dto';
+import { AppGateway } from '../gateways/app.gateway';
 import { Repository } from 'typeorm';
 import { Incident } from './entities/incident.entity';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -19,6 +20,8 @@ export class IncidentsService {
 
     @InjectRepository(Problem)
     private readonly problemRepository: Repository<Problem>,
+
+    private readonly appGateway: AppGateway,
   ) { }
 
   async create(createIncidentDto: CreateIncidentDto, user: any) {
@@ -70,7 +73,9 @@ export class IncidentsService {
       relatedProblem,
     });
 
-    return await this.incidentRepository.save(incident);
+    const saved = await this.incidentRepository.save(incident);
+    this.appGateway.server.emit('incident_updated');
+    return saved;
   }
 
   async findAll(user: any) {
@@ -173,7 +178,7 @@ export class IncidentsService {
     const isResolved = finalStatus === 'resolved';
     const isCanceled = finalStatus === 'canceled';
 
-    return await this.incidentRepository.save({
+    const saved = await this.incidentRepository.save({
       ...incident,
       ...updateIncidentDto,
       assignee,
@@ -182,9 +187,13 @@ export class IncidentsService {
       resolutionDate: isResolved && !incident.resolutionDate ? new Date() : incident.resolutionDate,
       closeDate: (isResolved || isCanceled) && !incident.closeDate ? new Date() : incident.closeDate,
     });
+    this.appGateway.server.emit('incident_updated');
+    return saved;
   }
 
   async remove(id: number) {
-    return await this.incidentRepository.softDelete(id);
+    const result = await this.incidentRepository.softDelete(id);
+    this.appGateway.server.emit('incident_deleted', id);
+    return result;
   }
 }

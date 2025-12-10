@@ -4,15 +4,34 @@ import { useNavigate } from 'react-router-dom';
 import { getIncidents, deleteIncident, updateIncident } from '../../services/incidents.service';
 import { type Incident, IncidentStatus, IncidentPriority, UserRole } from '../../types';
 import { useAuth } from '../../context/AuthContext';
+import { useSocket } from '../../context/SocketContext';
 
 const IncidentList = () => {
     const [incidents, setIncidents] = useState<Incident[]>([]);
     const navigate = useNavigate();
     const { user } = useAuth();
+    const { socket } = useSocket();
 
     useEffect(() => {
         loadIncidents();
     }, []);
+
+    useEffect(() => {
+        if (!socket) return;
+
+        socket.on('incident_updated', () => {
+            loadIncidents();
+        });
+
+        socket.on('incident_deleted', () => {
+            loadIncidents();
+        });
+
+        return () => {
+            socket.off('incident_updated');
+            socket.off('incident_deleted');
+        };
+    }, [socket]);
 
     const loadIncidents = async () => {
         try {

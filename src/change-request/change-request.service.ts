@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { CreateChangeRequestDto } from './dto/create-change-request.dto';
 import { UpdateChangeRequestDto } from './dto/update-change-request.dto';
+import { AppGateway } from '../gateways/app.gateway';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ChangeRequest } from './entities/change-request.entity';
 import { Repository } from 'typeorm';
@@ -15,6 +16,7 @@ export class ChangeRequestService {
 
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    private readonly appGateway: AppGateway,
   ) { }
 
   async create(createChangeRequestDto: CreateChangeRequestDto, user?: any) {
@@ -46,7 +48,9 @@ export class ChangeRequestService {
       approver,
     });
 
-    return await this.changeRequestRepository.save(changeRequest);
+    const saved = await this.changeRequestRepository.save(changeRequest);
+    this.appGateway.server.emit('change_request_updated');
+    return saved;
   }
 
   async findAll() {
@@ -126,16 +130,20 @@ export class ChangeRequestService {
       if (!requester) throw new BadRequestException('Requester user not found');
     }
 
-    return await this.changeRequestRepository.save({
+    const saved = await this.changeRequestRepository.save({
       ...changeRequest,
       ...updateChangeRequestDto,
       assignee,
       approver,
       requester,
     });
+    this.appGateway.server.emit('change_request_updated');
+    return saved;
   }
 
   async remove(id: number) {
-    return await this.changeRequestRepository.softDelete(id);
+    const result = await this.changeRequestRepository.softDelete(id);
+    this.appGateway.server.emit('change_request_deleted', id);
+    return result;
   }
 }

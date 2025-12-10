@@ -4,15 +4,34 @@ import { useNavigate } from 'react-router-dom';
 import { getProblems, deleteProblem, updateProblem } from '../../services/problems.service';
 import { type Problem, ProblemStatus, ProblemPriority, UserRole } from '../../types';
 import { useAuth } from '../../context/AuthContext';
+import { useSocket } from '../../context/SocketContext';
 
 const ProblemList = () => {
     const [problems, setProblems] = useState<Problem[]>([]);
     const navigate = useNavigate();
     const { user } = useAuth();
+    const { socket } = useSocket();
 
     useEffect(() => {
         loadProblems();
     }, []);
+
+    useEffect(() => {
+        if (!socket) return;
+
+        socket.on('problem_updated', () => {
+            loadProblems();
+        });
+
+        socket.on('problem_deleted', () => {
+            loadProblems();
+        });
+
+        return () => {
+            socket.off('problem_updated');
+            socket.off('problem_deleted');
+        };
+    }, [socket]);
 
     const loadProblems = async () => {
         try {

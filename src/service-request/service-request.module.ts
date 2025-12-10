@@ -6,10 +6,12 @@ import { ServiceRequest } from './entities/service-request.entity';
 import { UsersModule } from 'src/users/users.module';
 import { UsersService } from 'src/users/users.service';
 
+import { AppGateway } from '../gateways/app.gateway';
+
 @Module({
   imports: [TypeOrmModule.forFeature([ServiceRequest]), UsersModule],
   controllers: [ServiceRequestController],
-  providers: [ServiceRequestService, UsersService],
+  providers: [ServiceRequestService, UsersService, AppGateway],
   exports: [],
 })
 export class ServiceRequestModule { }
