@@ -1,26 +1,33 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../../services/api';
-import { User, Mail, Lock, ArrowRight, ShieldCheck } from 'lucide-react';
+import { User, Mail, Lock, ArrowRight, ShieldCheck, Building } from 'lucide-react';
 
 const RegisterPage = () => {
-    const [name, setName] = useState('');
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
+    const [formData, setFormData] = useState({
+        name: '',
+        department: '',
+        email: '',
+        password: ''
+    });
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: value
+        }));
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
         setError('');
         try {
-            await api.post('/auth/register', {
-                name,
-                email,
-                password,
-            });
+            await api.post('/auth/register', formData);
             navigate('/login');
         } catch (err: any) {
             setError(err.response?.data?.message || 'Registration failed. Please try again.');
@@ -84,8 +91,29 @@ const RegisterPage = () => {
                                         required
                                         className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                                         placeholder="John Doe"
-                                        value={name}
-                                        onChange={(e) => setName(e.target.value)}
+                                        value={formData.name}
+                                        onChange={handleChange}
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label htmlFor="department" className="block text-sm font-medium text-gray-700 mb-1">
+                                    Department
+                                </label>
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <Building size={20} className="text-gray-400" />
+                                    </div>
+                                    <input
+                                        id="department"
+                                        name="department"
+                                        type="text"
+                                        required
+                                        className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                                        placeholder="IT Support"
+                                        value={formData.department}
+                                        onChange={handleChange}
                                     />
                                 </div>
                             </div>
@@ -106,8 +134,8 @@ const RegisterPage = () => {
                                         required
                                         className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                                         placeholder="name@company.com"
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
+                                        value={formData.email}
+                                        onChange={handleChange}
                                     />
                                 </div>
                             </div>
@@ -128,8 +156,8 @@ const RegisterPage = () => {
                                         required
                                         className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                                         placeholder="••••••••"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
+                                        value={formData.password}
+                                        onChange={handleChange}
                                     />
                                 </div>
                             </div>
